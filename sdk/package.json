@@ -1,0 +1,13 @@
+{
+  "name": "@vaultauth/js",
+  "version": "1.0.0",
+  "description": "Official JavaScript SDK for VaultAuth",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": ["vaultauth", "authentication", "sdk"],
+  "license": "MIT"
+}
