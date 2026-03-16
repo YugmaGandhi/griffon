@@ -1,0 +1,59 @@
+version: '3.9'
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: vaultauth_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vaultauth
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: vaultauth_dev
+    ports:
+      - '5433:5432' # 5433 on host → 5432 in container
+                    # avoids conflict with your bidify postgres
+    volumes:
+      - vaultauth_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U vaultauth -d vaultauth_dev']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Redis ──────────────────────────────────────────────
+  redis:
+    image: redis:alpine
+    container_name: vaultauth_redis
+    restart: unless-stopped
+    ports:
+      - '6380:6379' # 6380 on host → 6379 in container
+                    # avoids conflict with your bidify redis
+    volumes:
+      - vaultauth_redis_data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Mailpit ────────────────────────────────────────────
+  # Catches all outgoing emails in development
+  # No emails actually get sent — they appear in the web UI
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: vaultauth_mailpit
+    restart: unless-stopped
+    ports:
+      - '1025:1025' # SMTP — your app sends emails here
+      - '8025:8025' # Web UI — you read emails here
+    environment:
+      MP_MAX_MESSAGES: 50
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
+# ── Named Volumes ───────────────────────────────────────
+# Data persists between docker compose restarts
+volumes:
+  vaultauth_postgres_data:
+  vaultauth_redis_data:

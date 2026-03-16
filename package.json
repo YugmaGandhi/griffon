@@ -11,7 +11,11 @@
     "build": "npm run build --workspace=server",
     "test": "npm run test --workspace=server",
     "lint": "npm run lint --workspace=server",
-    "prepare": "husky"
+    "prepare": "husky",
+    "infra:up": "docker compose up -d",
+    "infra:down": "docker compose down",
+    "infra:logs": "docker compose logs -f",
+    "infra:reset": "docker compose down -v"
   },
   "engines": {
     "node": ">=20.0.0"
