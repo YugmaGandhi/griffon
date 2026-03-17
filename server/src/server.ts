@@ -1,7 +1,17 @@
 import { buildApp } from './app';
 import { env } from './config/env';
+import { pool } from './db/connection';
 
 async function start() {
+  try {
+    const client = await pool.connect();
+    client.release();
+    console.info('Database connected');
+  } catch (err) {
+    console.error('Database connection failed: ', err);
+    process.exit(1);
+  }
+
   const app = await buildApp();
 
   try {
