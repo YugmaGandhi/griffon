@@ -16,7 +16,8 @@
     "format:check": "prettier --check src/**/*.ts",
     "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
     "db:migrate": "drizzle-kit push:pg --config=drizzle.config.ts",
-    "db:studio": "drizzle-kit studio --config=drizzle.config.ts"
+    "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
+    "lint:staged": "lint-staged"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.0",

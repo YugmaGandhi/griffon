@@ -1,14 +1,15 @@
 import { buildApp } from './app';
 import { env } from './config/env';
 import { pool } from './db/connection';
+import { logger } from './utils/logger';
 
 async function start() {
   try {
     const client = await pool.connect();
     client.release();
-    console.info('Database connected');
+    logger.info('Database connected');
   } catch (err) {
-    console.error('Database connection failed: ', err);
+    logger.error({ err }, 'Database connection failed');
     process.exit(1);
   }
 
@@ -19,8 +20,9 @@ async function start() {
       port: env.PORT,
       host: env.HOST,
     });
+    logger.info({ port: env.PORT, env: env.NODE_ENV }, 'Server started');
   } catch (err) {
-    app.log.error(err);
+    logger.error({ err }, 'Server failed to start');
     process.exit(1);
   }
 
@@ -29,9 +31,9 @@ async function start() {
   // it stops accepting new requests and waits for existing ones to finish
   // before closing. Without this, requests mid-flight would be cut off.
   const shutdown = async (signal: string) => {
-    app.log.info(`Received ${signal} — shutting down gracefully`);
+    logger.info({ signal }, 'Shutting down gracefully');
     await app.close();
-    app.log.info('Server closed');
+    logger.info('Server closed');
     process.exit(0);
   };
 

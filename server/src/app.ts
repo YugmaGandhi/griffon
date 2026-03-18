@@ -2,27 +2,21 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
 import { env } from './config/env';
+import { onRequestLogger, onResponseLogger } from './middleware/request-logger';
+import { logger } from './utils/logger';
 
 export async function buildApp() {
   const app = Fastify({
-    logger: {
-      level: env.LOG_LEVEL,
-      ...(env.NODE_ENV === 'development' && {
-        transport: {
-          target: 'pino-pretty',
-          options: {
-            colorize: true,
-            translateTime: 'HH:MM:ss',
-            ignore: 'pid,hostname',
-          },
-        },
-      }),
-    },
+    logger: false, // We use our own Pino logger, not Fastify's built-in
     // Assign a unique request ID to every request
     // This is what lets you trace a single request through all your logs
     genReqId: () => crypto.randomUUID(),
     requestIdHeader: 'x-request-id',
   });
+
+  // ── Hooks — registered once during boot ────────────────
+  app.addHook('onRequest', onRequestLogger);
+  app.addHook('onResponse', onResponseLogger);
 
   // ── Plugins ────────────────────────────────────────────
   // CORS — controls which domains can call your API
@@ -59,7 +53,7 @@ export async function buildApp() {
 
   // Global error handler — catches any unhandled errors
   app.setErrorHandler((error, request, reply) => {
-    app.log.error({ err: error, reqId: request.id }, 'Unhandled error');
+    logger.error({ err: error, reqId: request.id }, 'Unhandled error');
 
     void reply.status(error.statusCode ?? 500).send({
       success: false,
