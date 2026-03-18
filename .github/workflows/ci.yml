@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint & Test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: vaultauth
+          POSTGRES_PASSWORD: password
+          POSTGRES_DB: vaultauth_test
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6380:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Type check
+        working-directory: server
+        run: npm run typecheck
+
+      - name: Lint
+        working-directory: server
+        run: npm run lint
+
+      - name: Run tests
+        working-directory: server
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://vaultauth:password@localhost:5433/vaultauth_test
+          REDIS_URL: redis://localhost:6380
+          CORS_ORIGINS: http://localhost:3001
+          PORT: 3000
+          HOST: 0.0.0.0
+          LOG_LEVEL: error
+        run: npm test
+
+      - name: Check test coverage
+        working-directory: server
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://vaultauth:password@localhost:5433/vaultauth_test
+          REDIS_URL: redis://localhost:6380
+          CORS_ORIGINS: http://localhost:3001
+          PORT: 3000
+          HOST: 0.0.0.0
+          LOG_LEVEL: error
+        run: npm run test:coverage
