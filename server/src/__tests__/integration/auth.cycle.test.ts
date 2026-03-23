@@ -65,10 +65,6 @@ describe('Auth Cycle — register → login → refresh → logout', () => {
 
     // Step 3 — Login
     const loginRes = await loginUser(email, password);
-
-    // Temporary debug — remove after fix
-    console.log('Login response:', loginRes.body);
-
     expect(loginRes.statusCode).toBe(200);
 
     const loginBody = loginRes.json<{

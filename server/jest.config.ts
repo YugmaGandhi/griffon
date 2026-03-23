@@ -45,6 +45,10 @@ const config: Config = {
 
   // Fail fast in CI — stop after first failure
   bail: process.env.CI === 'true' ? 1 : 0,
+
+  // Force Jest to exit after all tests complete.
+  // Prevents "did not exit" warning caused by open DB pool connections.
+  forceExit: true,
 }
 
 export default config
