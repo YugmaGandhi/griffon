@@ -1,7 +1,7 @@
 import { eq, sql } from 'drizzle-orm';
 import { db } from '../db/connection';
 import { users } from '../db/schema';
-import { NewUser, User, SafeUser } from '../utils/types';
+import { NewUser, User, SafeUser, toSafeUser } from '../utils/types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('UserRepository');
@@ -14,7 +14,7 @@ export class UserRepository {
     const [user] = await db.insert(users).values(data).returning();
 
     // Never return passwordHash from repository
-    return this.toSafeUser(user);
+    return toSafeUser(user);
   }
 
   // ── Find by Email ─────────────────────────────────────
@@ -38,7 +38,7 @@ export class UserRepository {
     const [user] = await db.select().from(users).where(eq(users.id, id));
 
     if (!user) return null;
-    return this.toSafeUser(user);
+    return toSafeUser(user);
   }
 
   // ── Update Failed Attempts ────────────────────────────
@@ -111,15 +111,6 @@ export class UserRepository {
       .update(users)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
       .where(eq(users.id, id));
-  }
-
-  // ── Private Helpers ───────────────────────────────────
-  private toSafeUser(user: User): SafeUser {
-    // Destructure out passwordHash, return everything else
-    // Intentionally omitting passwordHash from the returned object
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...safeUser } = user;
-    return safeUser;
   }
 }
 

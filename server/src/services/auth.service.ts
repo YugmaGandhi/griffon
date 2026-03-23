@@ -2,7 +2,7 @@ import { userRepository } from '../repositories/user.repository';
 import { auditRepository } from '../repositories/audit.repository';
 import { passwordService } from './password.service';
 import { AuthError, ConflictError, ForbiddenError } from '../utils/errors';
-import { SafeUser, TokenUser } from '../utils/types';
+import { SafeUser, TokenUser, toSafeUser } from '../utils/types';
 import { createLogger } from '../utils/logger';
 import { tokenService } from './token.service';
 import { tokenRepository } from '../repositories/token.repository';
@@ -210,7 +210,7 @@ export class AuthService {
       refreshToken: rawRefreshToken,
       expiresIn,
       user: {
-        ...this.toSafeUser(user),
+        ...toSafeUser(user),
         roles: tokenUser.roles,
         permissions: tokenUser.permissions,
       },
@@ -342,26 +342,6 @@ export class AuthService {
       roles: ['user'],
       permissions: ['read:profile', 'write:profile'],
     };
-  }
-
-  // Helper — strips passwordHash from user object
-  private toSafeUser(user: {
-    id: string;
-    email: string;
-    isVerified: boolean;
-    isLocked: boolean;
-    failedAttempts: number;
-    createdAt: Date;
-    updatedAt: Date;
-    lastLoginAt: Date | null;
-    lockedUntil: Date | null;
-    oauthProvider: string | null;
-    oauthId: string | null;
-    passwordHash: string | null;
-  }): SafeUser {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { passwordHash, ...safeUser } = user;
-    return safeUser;
   }
 }
 

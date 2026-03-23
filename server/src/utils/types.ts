@@ -20,3 +20,12 @@ export type TokenUser = {
   roles: string[];
   permissions: string[];
 };
+
+// ── Utility Functions ────────────────────────────────────
+// Single source of truth for stripping sensitive fields
+// Use this everywhere instead of duplicating the destructure
+export function toSafeUser(user: User): SafeUser {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { passwordHash, ...safeUser } = user;
+  return safeUser;
+}
