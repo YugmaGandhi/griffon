@@ -17,7 +17,8 @@
     "db:generate": "drizzle-kit generate:pg --config=drizzle.config.ts",
     "db:migrate": "drizzle-kit push:pg --config=drizzle.config.ts",
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
-    "lint:staged": "lint-staged"
+    "lint:staged": "lint-staged",
+    "gen:keys": "node -e \"const crypto=require('crypto');const{privateKey,publicKey}=crypto.generateKeyPairSync('rsa',{modulusLength:2048,publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'}});const toBase64=(str)=>Buffer.from(str).toString('base64');console.log('JWT_PRIVATE_KEY='+toBase64(privateKey));console.log('');console.log('JWT_PUBLIC_KEY='+toBase64(publicKey));\""
   },
   "dependencies": {
     "@fastify/cors": "^9.0.0",

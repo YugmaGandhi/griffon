@@ -25,6 +25,13 @@ export const envSchema = z.object({
 
   // CORS
   CORS_ORIGINS: z.string().default('http://localhost:3001'),
+
+  //JWT
+  JWT_PRIVATE_KEY: z.string().min(1, 'JWT_PRIVATE_KEY is required'),
+  JWT_PUBLIC_KEY: z.string().min(1, 'JWT_PUBLIC_KEY is required'),
+  JWT_ACCESS_EXPIRY: z.string().default('15m'),
+  JWT_REFRESH_EXPIRY: z.string().default('30d'),
+  JWT_ISSUER: z.string().default('vaultauth'),
 });
 
 export type Env = z.infer<typeof envSchema>;
