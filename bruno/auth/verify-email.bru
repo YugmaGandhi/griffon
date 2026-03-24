@@ -1,0 +1,10 @@
+meta {
+  name: Verify Email
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/auth/verify-email?token={{verificationToken}}
+  auth: none
+}

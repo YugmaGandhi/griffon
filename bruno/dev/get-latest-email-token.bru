@@ -1,0 +1,22 @@
+meta {
+  name: Get Latest Email Token (Dev)
+  type: http
+  seq: 1
+}
+
+get {
+  url: http://localhost:8025/api/v1/messages
+  auth: none
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const messages = res.body.messages
+    if (messages && messages.length > 0) {
+      const latestMessage = messages[0]
+      bru.setVar("latestEmailId", latestMessage.ID)
+      console.log("Latest email ID:", latestMessage.ID)
+      console.log("Subject:", latestMessage.Subject)
+    }
+  }
+}

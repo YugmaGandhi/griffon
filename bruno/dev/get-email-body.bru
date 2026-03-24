@@ -1,0 +1,25 @@
+meta {
+  name: Get Email Body (Dev)
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://localhost:8025/api/v1/message/{{latestEmailId}}
+  auth: none
+}
+
+script:post-response {
+  if (res.status === 200) {
+    const body = res.body.Text || ""
+    
+    // Extract token from URL
+    const tokenMatch = body.match(/token=([a-f0-9]+)/)
+    if (tokenMatch) {
+      const token = tokenMatch[1]
+      bru.setVar("verificationToken", token)
+      bru.setVar("resetToken", token)
+      console.log("Token extracted:", token)
+    }
+  }
+}
