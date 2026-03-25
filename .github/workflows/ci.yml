@@ -36,6 +36,16 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      # This catches all outgoing emails during tests
+      mailpit:
+        image: axllent/mailpit:latest
+        ports:
+          - 1025:1025
+        env:
+          MP_MAX_MESSAGES: 50
+          MP_SMTP_AUTH_ACCEPT_ANY: 1
+          MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -79,4 +89,9 @@ jobs:
           JWT_ACCESS_EXPIRY: 15m
           JWT_REFRESH_EXPIRY: 30d
           JWT_ISSUER: vaultauth
+          # These point to the Mailpit service container
+          EMAIL_PROVIDER: smtp
+          EMAIL_FROM: noreply@example.com
+          SMTP_HOST: localhost
+          SMTP_PORT: 1025
         run: npm test
