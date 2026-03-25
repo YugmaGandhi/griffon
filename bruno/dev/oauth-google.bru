@@ -1,0 +1,22 @@
+meta {
+  name: Google OAuth (Browser Only)
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/auth/oauth/google
+  auth: none
+}
+
+docs {
+  OAuth requires a real browser — cannot be tested via Bruno directly.
+  
+  To test:
+  1. Open http://localhost:3000/auth/oauth/google in your browser
+  2. Complete Google login
+  3. You will be redirected to OAUTH_SUCCESS_REDIRECT with tokens in URL
+  4. Copy accessToken and refreshToken into Bruno environment variables
+  
+  Enabled providers: GET /auth/oauth/providers
+}

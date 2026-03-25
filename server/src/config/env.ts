@@ -43,6 +43,17 @@ export const envSchema = z.object({
   SMTP_PASS: z.string().optional(),
   RESEND_API_KEY: z.string().optional(),
   APP_BASE_URL: z.string().min(1, 'APP_BASE_URL is required'),
+
+  // OAuth Providers
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
+  GITHUB_CLIENT_ID: z.string().optional(),
+  GITHUB_CLIENT_SECRET: z.string().optional(),
+  MICROSOFT_CLIENT_ID: z.string().optional(),
+  MICROSOFT_CLIENT_SECRET: z.string().optional(),
+  OAUTH_CALLBACK_BASE_URL: z.string().default('http://localhost:3000'),
+  OAUTH_SUCCESS_REDIRECT: z.string().default('http://localhost:3001/dashboard'),
+  OAUTH_FAILURE_REDIRECT: z.string().default('http://localhost:3001/login'),
 });
 
 export type Env = z.infer<typeof envSchema>;

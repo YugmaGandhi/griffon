@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq, sql, and } from 'drizzle-orm';
 import { db } from '../db/connection';
 import { users } from '../db/schema';
 import { NewUser, User, SafeUser, toSafeUser } from '../utils/types';
@@ -110,6 +110,55 @@ export class UserRepository {
     await db
       .update(users)
       .set({ lastLoginAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, id));
+  }
+
+  // ── Find by OAuth ID ──────────────────────────────────────
+  async findByOAuthId(
+    provider: string,
+    oauthId: string
+  ): Promise<SafeUser | null> {
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(
+        and(eq(users.oauthProvider, provider), eq(users.oauthId, oauthId))
+      );
+
+    if (!user) return null;
+    return toSafeUser(user);
+  }
+
+  // ── Create OAuth User ─────────────────────────────────────
+  async createOAuthUser(data: {
+    email: string;
+    oauthProvider: string;
+    oauthId: string;
+    isVerified: boolean;
+  }): Promise<SafeUser> {
+    const [user] = await db
+      .insert(users)
+      .values({
+        email: data.email,
+        oauthProvider: data.oauthProvider,
+        oauthId: data.oauthId,
+        isVerified: data.isVerified,
+        passwordHash: null,
+      })
+      .returning();
+
+    return toSafeUser(user);
+  }
+
+  // ── Link OAuth to existing account ────────────────────────
+  async linkOAuth(
+    id: string,
+    oauthProvider: string,
+    oauthId: string
+  ): Promise<void> {
+    await db
+      .update(users)
+      .set({ oauthProvider, oauthId, updatedAt: new Date() })
       .where(eq(users.id, id));
   }
 }

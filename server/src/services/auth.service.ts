@@ -8,6 +8,7 @@ import { tokenService } from './token.service';
 import { tokenRepository } from '../repositories/token.repository';
 import { emailTokenRepository } from '../repositories/email-token.repository';
 import { emailService } from './email.service';
+import { OAuthProfile } from '../config/oauth-providers';
 
 const log = createLogger('AuthService');
 
@@ -446,6 +447,97 @@ export class AuthService {
     });
 
     log.info({ userId: emailToken.userId }, 'Password reset successfully');
+  }
+
+  async oauthLogin(params: {
+    profile: OAuthProfile;
+    providerName: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<LoginResult> {
+    const { profile, providerName, ipAddress, userAgent } = params;
+
+    log.info(
+      { email: profile.email, provider: providerName },
+      'OAuth login attempt'
+    );
+
+    // Step 1 — Find existing OAuth user
+    let user = await userRepository.findByOAuthId(providerName, profile.id);
+
+    if (!user) {
+      // Step 2 — Check if email already exists
+      const existingByEmail = await userRepository.findByEmail(profile.email);
+
+      if (existingByEmail) {
+        // Link OAuth to existing account
+        await userRepository.linkOAuth(
+          existingByEmail.id,
+          providerName,
+          profile.id
+        );
+        user = await userRepository.findById(existingByEmail.id);
+      } else {
+        // Step 3 — Create brand new user
+        // OAuth users skip email verification
+        user = await userRepository.createOAuthUser({
+          email: profile.email.toLowerCase().trim(),
+          oauthProvider: providerName,
+          oauthId: profile.id,
+          isVerified: true,
+        });
+      }
+    }
+
+    if (!user) {
+      throw new AuthError('INTERNAL_ERROR', 'OAuth login failed', 500);
+    }
+
+    // Step 4 — Generate VaultAuth tokens
+    const tokenUser: TokenUser = {
+      id: user.id,
+      email: user.email,
+      roles: ['user'],
+      permissions: ['read:profile', 'write:profile'],
+    };
+
+    const accessToken = await tokenService.generateAccessToken(tokenUser);
+    const rawRefreshToken = tokenService.generateRefreshToken();
+    const refreshTokenHash = tokenService.hashRefreshToken(rawRefreshToken);
+
+    await tokenRepository.create({
+      userId: user.id,
+      tokenHash: refreshTokenHash,
+      deviceInfo: userAgent,
+      ipAddress,
+      expiresAt: tokenService.getRefreshTokenExpiry(),
+    });
+
+    await userRepository.updateLastLogin(user.id);
+
+    void auditRepository.create({
+      userId: user.id,
+      eventType: 'oauth_login',
+      ipAddress,
+      userAgent,
+      metadata: { provider: providerName, email: profile.email },
+    });
+
+    log.info(
+      { userId: user.id, provider: providerName },
+      'OAuth login successful'
+    );
+
+    return {
+      accessToken,
+      refreshToken: rawRefreshToken,
+      expiresIn: 900,
+      user: {
+        ...user,
+        roles: tokenUser.roles,
+        permissions: tokenUser.permissions,
+      },
+    };
   }
 }
 

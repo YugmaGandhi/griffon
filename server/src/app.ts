@@ -5,6 +5,7 @@ import { env } from './config/env';
 import { onRequestLogger, onResponseLogger } from './middleware/request-logger';
 import { logger } from './utils/logger';
 import { authRoutes } from './routes/auth.routes';
+import { oauthRoutes } from './routes/oauth.routes';
 
 export async function buildApp() {
   const app = Fastify({
@@ -43,6 +44,7 @@ export async function buildApp() {
 
   // Register all auth routes under /auth prefix
   await app.register(authRoutes, { prefix: '/auth' });
+  await app.register(oauthRoutes, { prefix: '/auth' });
 
   // ── Error Handlers ──────────────────────────────────────
   app.setNotFoundHandler((request, reply) => {
