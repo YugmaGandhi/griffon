@@ -1,11 +1,14 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import helmet from '@fastify/helmet';
+import fastifyRateLimit from '@fastify/rate-limit';
 import { env } from './config/env';
+import { redis } from './db/redis';
 import { onRequestLogger, onResponseLogger } from './middleware/request-logger';
 import { logger } from './utils/logger';
 import { authRoutes } from './routes/auth.routes';
 import { oauthRoutes } from './routes/oauth.routes';
+import { buildErrorResponse } from './utils/response';
 
 export async function buildApp() {
   const app = Fastify({
@@ -31,6 +34,35 @@ export async function buildApp() {
   // Protects against clickjacking, MIME sniffing, and more
   await app.register(helmet);
 
+  // Rate limiting — uses Redis for distributed counting
+  // Works correctly across multiple server instances
+  await app.register(fastifyRateLimit, {
+    global: true,
+    max: 100, // 100 requests
+    timeWindow: '15 minutes', // per 15 minutes per IP
+    redis,
+    skipOnError: true, // Don't fail if Redis is down
+    keyGenerator: (request) => {
+      // Rate limit by IP
+      // In production behind a load balancer use X-Forwarded-For
+      return request.ip;
+    },
+    errorResponseBuilder: (_request, context) => {
+      const response = buildErrorResponse(
+        'RATE_LIMIT_EXCEEDED',
+        `Too many requests. Please try again after ${Math.ceil(context.ttl / 1000)} seconds.`
+      );
+
+      // Attach statusCode as a hidden property.
+      Object.defineProperty(response, 'statusCode', {
+        value: 429,
+        enumerable: false,
+      });
+
+      return response;
+    },
+  });
+
   // ── Routes ─────────────────────────────────────────────
   // Health check — first real endpoint
   app.get('/health', async (_request, reply) => {
@@ -48,29 +80,28 @@ export async function buildApp() {
 
   // ── Error Handlers ──────────────────────────────────────
   app.setNotFoundHandler((request, reply) => {
-    void reply.status(404).send({
-      success: false,
-      error: {
-        code: 'NOT_FOUND',
-        message: `Route ${request.method} ${request.url} not found`,
-      },
-    });
+    void reply
+      .status(404)
+      .send(
+        buildErrorResponse(
+          'NOT_FOUND',
+          `Route ${request.method} ${request.url} not found`
+        )
+      );
   });
 
   // Global error handler — catches any unhandled errors
   app.setErrorHandler((error, request, reply) => {
     logger.error({ err: error, reqId: request.id }, 'Unhandled error');
 
-    void reply.status(error.statusCode ?? 500).send({
-      success: false,
-      error: {
-        code: 'INTERNAL_ERROR',
-        message:
-          env.NODE_ENV === 'production'
-            ? 'Something went wrong'
-            : error.message,
-      },
-    });
+    void reply
+      .status(error.statusCode ?? 500)
+      .send(
+        buildErrorResponse(
+          'INTERNAL_ERROR',
+          env.NODE_ENV === 'production' ? 'Something went wrong' : error.message
+        )
+      );
   });
 
   return app;

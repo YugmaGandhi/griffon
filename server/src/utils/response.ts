@@ -120,3 +120,28 @@ export function sendConflict(
 ) {
   return sendError(reply, 409, code, message);
 }
+
+// ── Pure error object builders ────────────────────────
+// Used when you need the error shape but don't have a reply object
+// e.g. rate limiter, global error handler
+export function buildErrorResponse(
+  code: string,
+  message: string,
+  details?: ValidationDetail[]
+): ErrorResponse {
+  return {
+    success: false,
+    error: {
+      code,
+      message,
+      ...(details && { details }),
+    },
+  };
+}
+
+export function buildSuccessResponse<T>(data: T): SuccessResponse<T> {
+  return {
+    success: true,
+    data,
+  };
+}

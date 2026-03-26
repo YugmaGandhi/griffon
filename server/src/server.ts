@@ -1,15 +1,25 @@
 import { buildApp } from './app';
 import { env } from './config/env';
 import { pool } from './db/connection';
+import { connectRedis } from './db/redis';
 import { logger } from './utils/logger';
 
 async function start() {
+  // Test database connection
   try {
     const client = await pool.connect();
     client.release();
     logger.info('Database connected');
   } catch (err) {
     logger.error({ err }, 'Database connection failed');
+    process.exit(1);
+  }
+
+  // Connect Redis
+  try {
+    await connectRedis();
+  } catch (err) {
+    logger.error({ err }, 'Redis connection failed');
     process.exit(1);
   }
 
