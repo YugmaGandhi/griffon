@@ -20,7 +20,8 @@
     "db:studio": "drizzle-kit studio --config=drizzle.config.ts",
     "lint:staged": "lint-staged",
     "gen:keys": "node -e \"const crypto=require('crypto');const{privateKey,publicKey}=crypto.generateKeyPairSync('rsa',{modulusLength:2048,publicKeyEncoding:{type:'spki',format:'pem'},privateKeyEncoding:{type:'pkcs8',format:'pem'}});const toBase64=(str)=>Buffer.from(str).toString('base64');console.log('JWT_PRIVATE_KEY='+toBase64(privateKey));console.log('');console.log('JWT_PUBLIC_KEY='+toBase64(publicKey));\"",
-    "dev:verify": "ts-node src/utils/dev-verify.ts"
+    "dev:verify": "ts-node src/utils/dev-verify.ts",
+    "dev:make-admin": "ts-node src/utils/dev-make-admin.ts"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.0",
