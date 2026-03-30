@@ -1,6 +1,7 @@
 import { VaultAuthConfig, LoginResult, RegisterResult, AuthUser, ApiResponse, ApiErrorResponse, TokenPair } from './types'
 import { VaultAuthError } from './errors'
 import { TokenStore } from './token-store'
+import { API_PATHS } from './api-paths'
 
 export class VaultAuthClient {
   private config: Required<VaultAuthConfig>
@@ -21,7 +22,7 @@ export class VaultAuthClient {
   async register(email: string, password: string): Promise<RegisterResult> {
     const response = await this.request<RegisterResult>(
       'POST',
-      '/auth/register',
+      API_PATHS.auth.register,
       { email, password }
     )
     return response
@@ -30,7 +31,7 @@ export class VaultAuthClient {
   async login(email: string, password: string): Promise<LoginResult> {
     const result = await this.request<LoginResult>(
       'POST',
-      '/auth/login',
+      API_PATHS.auth.login,
       { email, password }
     )
 
@@ -49,7 +50,7 @@ export class VaultAuthClient {
 
     if (refreshToken) {
       try {
-        await this.request('POST', '/auth/logout', { refreshToken })
+        await this.request('POST', API_PATHS.auth.logout, { refreshToken })
       } catch {
         // Even if server logout fails — clear local tokens
       }
@@ -59,7 +60,7 @@ export class VaultAuthClient {
   }
 
   async getMe(): Promise<AuthUser> {
-    return this.authenticatedRequest<AuthUser>('GET', '/auth/me')
+    return this.authenticatedRequest<AuthUser>('GET', API_PATHS.auth.me)
   }
 
   async refreshTokens(): Promise<void> {
@@ -74,7 +75,7 @@ export class VaultAuthClient {
 
     const result = await this.request<TokenPair>(
       'POST',
-      '/auth/refresh',
+      API_PATHS.auth.refresh,
       { refreshToken }
     )
 
@@ -82,28 +83,28 @@ export class VaultAuthClient {
   }
 
   async forgotPassword(email: string): Promise<{ message: string }> {
-    return this.request('POST', '/auth/forgot-password', { email })
+    return this.request('POST', API_PATHS.auth.forgotPassword, { email })
   }
 
   async resetPassword(
     token: string,
     newPassword: string
   ): Promise<{ message: string }> {
-    return this.request('POST', '/auth/reset-password', {
+    return this.request('POST', API_PATHS.auth.resetPassword, {
       token,
       newPassword,
     })
   }
 
   async verifyEmail(token: string): Promise<{ message: string }> {
-    return this.request('GET', `/auth/verify-email?token=${token}`)
+    return this.request('GET', `${API_PATHS.auth.verifyEmail}?token=${token}`)
   }
 
   // ── OAuth Methods ─────────────────────────────────────
 
   // Returns the URL to redirect the user to for OAuth login
   getOAuthUrl(provider: string): string {
-    return `${this.config.baseUrl}/auth/oauth/${provider}`
+    return `${this.config.baseUrl}${API_PATHS.oauth.provider(provider)}`
   }
 
   // Call this after OAuth redirect returns tokens in URL params

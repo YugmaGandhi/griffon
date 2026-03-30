@@ -9,8 +9,7 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "jest",
-    "lint": "eslint src --ext .ts",
-    "test:manual": "ts-node test-sdk.ts"
+    "lint": "eslint src --ext .ts"
   },
   "keywords": [
     "vaultauth",
