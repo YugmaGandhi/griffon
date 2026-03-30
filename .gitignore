@@ -34,3 +34,6 @@ coverage/
 # Bruno — ignore environment secrets only
 bruno/environments/production.bru
 bruno/environments/staging.bru
+
+#claude code setting
+.claude/
