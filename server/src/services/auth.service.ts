@@ -10,6 +10,7 @@ import { emailTokenRepository } from '../repositories/email-token.repository';
 import { emailService } from './email.service';
 import { OAuthProfile } from '../config/oauth-providers';
 import { rbacService } from './rbac.service';
+import { authEventsTotal } from '../utils/metrics';
 
 const log = createLogger('AuthService');
 
@@ -86,6 +87,7 @@ export class AuthService {
       metadata: { email },
     });
 
+    authEventsTotal.inc({ event: 'register' });
     log.info({ userId: user.id, email }, 'User registered successfully');
 
     return {
@@ -110,6 +112,7 @@ export class AuthService {
         ipAddress,
         metadata: { email, reason: 'user_not_found' },
       });
+      authEventsTotal.inc({ event: 'login_failed' });
       throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
     }
 
@@ -162,6 +165,7 @@ export class AuthService {
           ipAddress,
           metadata: { reason: 'max_failed_attempts' },
         });
+        authEventsTotal.inc({ event: 'account_locked' });
 
         throw new AuthError(
           'ACCOUNT_LOCKED',
@@ -176,6 +180,7 @@ export class AuthService {
         ipAddress,
         metadata: { reason: 'invalid_password' },
       });
+      authEventsTotal.inc({ event: 'login_failed' });
 
       throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
     }
@@ -218,6 +223,7 @@ export class AuthService {
       metadata: { email },
     });
 
+    authEventsTotal.inc({ event: 'login_success' });
     log.info({ userId: user.id }, 'Login successful');
 
     // Access token expires in 15 minutes = 900 seconds
@@ -261,6 +267,7 @@ export class AuthService {
       metadata: {},
     });
 
+    authEventsTotal.inc({ event: 'logout' });
     log.info({ userId }, 'Logout successful');
   }
 
@@ -336,6 +343,7 @@ export class AuthService {
       metadata: {},
     });
 
+    authEventsTotal.inc({ event: 'token_refresh' });
     log.info({ userId: user.id }, 'Token refresh successful');
 
     return {
@@ -402,6 +410,7 @@ export class AuthService {
       metadata: {},
     });
 
+    authEventsTotal.inc({ event: 'email_verified' });
     log.info({ userId: emailToken.userId }, 'Email verified successfully');
   }
 
@@ -464,6 +473,7 @@ export class AuthService {
       metadata: {},
     });
 
+    authEventsTotal.inc({ event: 'password_reset' });
     log.info({ userId: emailToken.userId }, 'Password reset successfully');
   }
 
@@ -545,6 +555,7 @@ export class AuthService {
       metadata: { provider: providerName, email: profile.email },
     });
 
+    authEventsTotal.inc({ event: 'oauth_login' });
     log.info(
       { userId: user.id, provider: providerName },
       'OAuth login successful'

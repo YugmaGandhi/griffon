@@ -13,6 +13,11 @@ import { rbacRoutes } from './routes/rbac.routes';
 import { adminRoutes } from './routes/admin.routes';
 import { pool } from './db/connection';
 import { seedSystemData } from './db/seed';
+import {
+  httpRequestDuration,
+  httpRequestsTotal,
+  metricsRegistry,
+} from './utils/metrics';
 
 export async function buildApp() {
   const app = Fastify({
@@ -29,6 +34,34 @@ export async function buildApp() {
 
   app.addHook('onSend', (_request, reply, _payload, done) => {
     void reply.header('x-request-id', _request.id);
+    done();
+  });
+
+  // ── Metrics — track HTTP request duration + count ──────
+  app.addHook('onRequest', (request, _reply, done) => {
+    // Store start time on request for duration calculation
+    (request as unknown as Record<string, unknown>).__startTime =
+      process.hrtime.bigint();
+    done();
+  });
+
+  app.addHook('onResponse', (request, reply, done) => {
+    const startTime = (request as unknown as Record<string, unknown>)
+      .__startTime as bigint | undefined;
+    if (startTime) {
+      const duration =
+        Number(process.hrtime.bigint() - startTime) / 1_000_000_000;
+      // Use routeOptions.url for the parameterized route pattern (e.g. /api/users/:id/roles)
+      // Falls back to request.url for routes without patterns (e.g. /health)
+      const route = request.routeOptions?.url ?? request.url;
+      const labels = {
+        method: request.method,
+        route,
+        status_code: reply.statusCode.toString(),
+      };
+      httpRequestDuration.observe(labels, duration);
+      httpRequestsTotal.inc(labels);
+    }
     done();
   });
 
@@ -108,6 +141,16 @@ export async function buildApp() {
         redis: redisStatus,
       },
     });
+  });
+
+  // ── Prometheus metrics ──────────────────────────────────
+  // WARNING: Protect this endpoint in production — it exposes internal
+  // system metrics. Use a reverse proxy, IP allowlist, or authenticate.
+  app.get('/metrics', async (_request, reply) => {
+    const metrics = await metricsRegistry.metrics();
+    return reply
+      .header('content-type', metricsRegistry.contentType)
+      .send(metrics);
   });
 
   // Register all auth routes under /auth prefix
