@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { buildApp } from '../../app';
 import { db } from '../../db/connection';
+import { redis } from '../../db/redis';
 import { users } from '../../db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { seedSystemData } from '../../db/seed';
@@ -9,11 +10,14 @@ describe('Auth Cycle — register → login → refresh → logout', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
+    await redis.connect();
     app = await buildApp();
     await app.ready();
   });
 
   beforeEach(async () => {
+    // Clear rate limit counters between tests
+    await redis.flushdb();
     // TRUNCATE CASCADE handles all FK dependencies atomically
     // Much safer than manual delete ordering
     await db.execute(

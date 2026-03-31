@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import { buildApp } from '../../app';
 import { db } from '../../db/connection';
+import { redis } from '../../db/redis';
 import { users } from '../../db/schema';
 import { FastifyInstance } from 'fastify';
 import { seedSystemData } from '../../db/seed';
@@ -10,6 +11,7 @@ describe('POST /auth/register', () => {
 
   // Build a fresh app instance before all tests in this file
   beforeAll(async () => {
+    await redis.connect();
     app = await buildApp();
     await app.ready();
   });
@@ -17,6 +19,7 @@ describe('POST /auth/register', () => {
   // Clean up users table before each test
   // So tests don't affect each other
   beforeEach(async () => {
+    await redis.flushdb();
     await db.execute(
       sql`TRUNCATE TABLE audit_logs, refresh_tokens, email_tokens, user_roles, role_permissions, roles, permissions, users RESTART IDENTITY CASCADE`
     );
