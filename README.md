@@ -127,6 +127,7 @@ Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to 
 | POST | `/api/users/:id/roles` | Assign role |
 | DELETE | `/api/users/:id/roles/:roleId` | Remove role |
 | GET | `/api/admin/audit-logs` | Query audit logs |
+| GET | `/metrics` | Prometheus metrics |
 
 ### Default Roles & Permissions
 
@@ -257,6 +258,37 @@ VaultAuth is built with security first:
 -   **Security headers** — Helmet.js (CSP, HSTS, X-Frame-Options)
 
 To report a vulnerability, see [SECURITY.md](./SECURITY.md).
+
+----------
+
+## Monitoring
+
+VaultAuth exposes a Prometheus-compatible `/metrics` endpoint for observability.
+
+**Available metrics:**
+
+| Metric | Type | Description |
+|--------|------|-------------|
+| `vaultauth_http_request_duration_seconds` | Histogram | Request duration by method, route, status |
+| `vaultauth_http_requests_total` | Counter | Total requests by method, route, status |
+| `vaultauth_auth_events_total` | Counter | Auth events (login_success, login_failed, register, logout, account_locked, etc.) |
+| `vaultauth_active_sessions` | Gauge | Active refresh token count |
+| `vaultauth_nodejs_*` | Various | Node.js process metrics (memory, CPU, event loop, GC) |
+
+**Grafana dashboard example:**
+
+```promql
+# Request rate
+rate(vaultauth_http_requests_total[5m])
+
+# Login failure rate (brute force detection)
+rate(vaultauth_auth_events_total{event="login_failed"}[5m])
+
+# P95 latency
+histogram_quantile(0.95, rate(vaultauth_http_request_duration_seconds_bucket[5m]))
+```
+
+> **Production warning:** The `/metrics` endpoint is unauthenticated by default. Protect it with a reverse proxy, IP allowlist, or network policy. Do not expose it to the public internet.
 
 ----------
 
