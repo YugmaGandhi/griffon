@@ -10,6 +10,7 @@ import {
   pgEnum,
   primaryKey,
   text,
+  uniqueIndex,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -32,7 +33,38 @@ export const auditEventTypeEnum = pgEnum('audit_event_type', [
   'role_assigned',
   'role_removed',
   'oauth_login',
+  'org_created',
+  'org_updated',
+  'org_deleted',
+  'org_member_invited',
+  'org_member_joined',
+  'org_member_removed',
+  'org_member_role_changed',
+  'org_switched',
 ]);
+
+export const orgInvitationStatusEnum = pgEnum('org_invitation_status', [
+  'pending',
+  'accepted',
+  'expired',
+  'revoked',
+]);
+
+// ── Organizations ──────────────────────────────────────
+export const organizations = pgTable('organizations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: varchar('name', { length: 255 }).notNull(),
+  slug: varchar('slug', { length: 255 }).notNull().unique(),
+  logoUrl: varchar('logo_url', { length: 2048 }),
+  metadata: jsonb('metadata').notNull().default({}),
+  createdBy: uuid('created_by'),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp('updated_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
 
 // ── Users ───────────────────────────────────────────────
 export const users = pgTable('users', {
@@ -46,6 +78,9 @@ export const users = pgTable('users', {
   lastLoginAt: timestamp('last_login_at', { withTimezone: true }),
   oauthProvider: varchar('oauth_provider', { length: 50 }),
   oauthId: varchar('oauth_id', { length: 255 }),
+  activeOrgId: uuid('active_org_id').references(() => organizations.id, {
+    onDelete: 'set null',
+  }),
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()
     .defaultNow(),
@@ -153,12 +188,70 @@ export const auditLogs = pgTable('audit_logs', {
     .defaultNow(),
 });
 
+// ── Org Members ────────────────────────────────────────
+export const orgMembers = pgTable(
+  'org_members',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    orgId: uuid('org_id')
+      .notNull()
+      .references(() => organizations.id, { onDelete: 'cascade' }),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    role: varchar('role', { length: 50 }).notNull().default('member'),
+    joinedAt: timestamp('joined_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex('org_members_org_user_idx').on(table.orgId, table.userId),
+  ]
+);
+
+// ── Org Invitations ────────────────────────────────────
+export const orgInvitations = pgTable('org_invitations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  orgId: uuid('org_id')
+    .notNull()
+    .references(() => organizations.id, { onDelete: 'cascade' }),
+  email: varchar('email', { length: 255 }).notNull(),
+  role: varchar('role', { length: 50 }).notNull().default('member'),
+  invitedBy: uuid('invited_by').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  tokenHash: varchar('token_hash', { length: 255 }).notNull().unique(),
+  status: orgInvitationStatusEnum('status').notNull().default('pending'),
+  expiresAt: timestamp('expires_at', { withTimezone: true }).notNull(),
+  acceptedAt: timestamp('accepted_at', { withTimezone: true }),
+  createdAt: timestamp('created_at', { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // ── Relations (for Drizzle joins) ───────────────────────
-export const usersRelations = relations(users, ({ many }) => ({
+export const organizationsRelations = relations(
+  organizations,
+  ({ one, many }) => ({
+    createdByUser: one(users, {
+      fields: [organizations.createdBy],
+      references: [users.id],
+    }),
+    members: many(orgMembers),
+    invitations: many(orgInvitations),
+  })
+);
+
+export const usersRelations = relations(users, ({ one, many }) => ({
   refreshTokens: many(refreshTokens),
   emailTokens: many(emailTokens),
   userRoles: many(userRoles),
   auditLogs: many(auditLogs),
+  orgMemberships: many(orgMembers),
+  activeOrg: one(organizations, {
+    fields: [users.activeOrgId],
+    references: [organizations.id],
+  }),
 }));
 
 export const rolesRelations = relations(roles, ({ many }) => ({
@@ -168,4 +261,26 @@ export const rolesRelations = relations(roles, ({ many }) => ({
 
 export const permissionsRelations = relations(permissions, ({ many }) => ({
   rolePermissions: many(rolePermissions),
+}));
+
+export const orgMembersRelations = relations(orgMembers, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [orgMembers.orgId],
+    references: [organizations.id],
+  }),
+  user: one(users, {
+    fields: [orgMembers.userId],
+    references: [users.id],
+  }),
+}));
+
+export const orgInvitationsRelations = relations(orgInvitations, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [orgInvitations.orgId],
+    references: [organizations.id],
+  }),
+  invitedByUser: one(users, {
+    fields: [orgInvitations.invitedBy],
+    references: [users.id],
+  }),
 }));

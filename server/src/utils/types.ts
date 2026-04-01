@@ -1,5 +1,13 @@
 import { InferSelectModel, InferInsertModel } from 'drizzle-orm';
-import { users, refreshTokens, roles, permissions } from '../db/schema';
+import {
+  users,
+  refreshTokens,
+  roles,
+  permissions,
+  organizations,
+  orgMembers,
+  orgInvitations,
+} from '../db/schema';
 
 // Infer types directly from Drizzle schema
 // These stay in sync automatically when schema changes
@@ -8,6 +16,10 @@ export type NewUser = InferInsertModel<typeof users>;
 export type RefreshToken = InferSelectModel<typeof refreshTokens>;
 export type Role = InferSelectModel<typeof roles>;
 export type Permission = InferSelectModel<typeof permissions>;
+export type Organization = InferSelectModel<typeof organizations>;
+export type NewOrganization = InferInsertModel<typeof organizations>;
+export type OrgMember = InferSelectModel<typeof orgMembers>;
+export type OrgInvitation = InferSelectModel<typeof orgInvitations>;
 
 // User shape safe to return in API responses
 // Never includes passwordHash
