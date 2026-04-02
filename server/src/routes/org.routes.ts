@@ -34,6 +34,17 @@ const orgIdParamSchema = z.object({
   orgId: z.string().uuid('Invalid organization ID'),
 });
 
+const memberParamSchema = z.object({
+  orgId: z.string().uuid('Invalid organization ID'),
+  userId: z.string().uuid('Invalid user ID'),
+});
+
+const updateMemberRoleSchema = z.object({
+  role: z.enum(['owner', 'admin', 'member'], {
+    errorMap: () => ({ message: 'Role must be owner, admin, or member' }),
+  }),
+});
+
 const orgRoutes: FastifyPluginCallback = (
   app: FastifyInstance,
   _options,
@@ -175,6 +186,109 @@ const orgRoutes: FastifyPluginCallback = (
         return sendError(reply, err.statusCode, err.code, err.message);
       }
       log.error({ err, reqId: request.id }, 'Unexpected error deleting org');
+      throw err;
+    }
+  });
+
+  // ── GET /api/orgs/:orgId/members — List members ───────
+  app.get('/:orgId/members', async (request, reply) => {
+    const parsed = orgIdParamSchema.safeParse(request.params);
+    if (!parsed.success) {
+      return sendValidationError(
+        reply,
+        parsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        }))
+      );
+    }
+
+    try {
+      const members = await orgService.listMembers(parsed.data.orgId);
+      return sendSuccess(reply, { members });
+    } catch (err) {
+      if (isAppError(err)) {
+        return sendError(reply, err.statusCode, err.code, err.message);
+      }
+      throw err;
+    }
+  });
+
+  // ── PATCH /api/orgs/:orgId/members/:userId — Update role
+  app.patch('/:orgId/members/:userId', async (request, reply) => {
+    const paramsParsed = memberParamSchema.safeParse(request.params);
+    if (!paramsParsed.success) {
+      return sendValidationError(
+        reply,
+        paramsParsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        }))
+      );
+    }
+
+    const bodyParsed = updateMemberRoleSchema.safeParse(request.body);
+    if (!bodyParsed.success) {
+      return sendValidationError(
+        reply,
+        bodyParsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        }))
+      );
+    }
+
+    try {
+      await orgService.updateMemberRole({
+        orgId: paramsParsed.data.orgId,
+        targetUserId: paramsParsed.data.userId,
+        newRole: bodyParsed.data.role,
+        actorUserId: request.user!.id,
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
+
+      return sendSuccess(reply, { message: 'Member role updated' });
+    } catch (err) {
+      if (isAppError(err)) {
+        return sendError(reply, err.statusCode, err.code, err.message);
+      }
+      log.error(
+        { err, reqId: request.id },
+        'Unexpected error updating member role'
+      );
+      throw err;
+    }
+  });
+
+  // ── DELETE /api/orgs/:orgId/members/:userId — Remove member
+  app.delete('/:orgId/members/:userId', async (request, reply) => {
+    const parsed = memberParamSchema.safeParse(request.params);
+    if (!parsed.success) {
+      return sendValidationError(
+        reply,
+        parsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        }))
+      );
+    }
+
+    try {
+      await orgService.removeMember({
+        orgId: parsed.data.orgId,
+        targetUserId: parsed.data.userId,
+        actorUserId: request.user!.id,
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
+
+      return sendSuccess(reply, { message: 'Member removed' });
+    } catch (err) {
+      if (isAppError(err)) {
+        return sendError(reply, err.statusCode, err.code, err.message);
+      }
+      log.error({ err, reqId: request.id }, 'Unexpected error removing member');
       throw err;
     }
   });

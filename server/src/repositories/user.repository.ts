@@ -159,6 +159,15 @@ export class UserRepository {
       .where(eq(users.activeOrgId, orgId));
   }
 
+  // ── Clear Active Org for a single user ─────────────────
+  // Used when a user is removed from an org
+  async clearActiveOrgForUser(userId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ activeOrgId: null, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
   // ── Link OAuth to existing account ────────────────────────
   async linkOAuth(
     id: string,

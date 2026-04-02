@@ -211,6 +211,172 @@ export class OrgService {
 
     log.info({ orgId }, 'Organization deleted');
   }
+  // ── Member Management ──────────────────────────────────
+
+  async listMembers(orgId: string) {
+    return orgRepository.listMembers(orgId);
+  }
+
+  async updateMemberRole(params: {
+    orgId: string;
+    targetUserId: string;
+    newRole: string;
+    actorUserId: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    const { orgId, targetUserId, newRole, actorUserId, ipAddress, userAgent } =
+      params;
+
+    log.info({ orgId, targetUserId, newRole }, 'Updating member role');
+
+    // Check target is a member
+    const targetMembership = await orgRepository.findMembership(
+      orgId,
+      targetUserId
+    );
+    if (!targetMembership) {
+      throw new NotFoundError('NOT_FOUND', 'Member not found in organization');
+    }
+
+    // Check actor's membership
+    const actorMembership = await orgRepository.findMembership(
+      orgId,
+      actorUserId
+    );
+    if (!actorMembership) {
+      throw new ForbiddenError(
+        'FORBIDDEN',
+        'You are not a member of this organization'
+      );
+    }
+
+    // Role hierarchy enforcement
+    const ROLE_RANK: Record<string, number> = {
+      owner: 3,
+      admin: 2,
+      member: 1,
+    };
+
+    const actorRank = ROLE_RANK[actorMembership.role] ?? 0;
+    const targetCurrentRank = ROLE_RANK[targetMembership.role] ?? 0;
+    const targetNewRank = ROLE_RANK[newRole] ?? 0;
+
+    // Can't change someone at or above your level
+    if (targetCurrentRank >= actorRank) {
+      throw new ForbiddenError(
+        'FORBIDDEN',
+        'You cannot change the role of a member with equal or higher rank'
+      );
+    }
+
+    // Can't promote someone to or above your level
+    if (targetNewRank >= actorRank) {
+      throw new ForbiddenError(
+        'FORBIDDEN',
+        'You cannot promote a member to your rank or higher'
+      );
+    }
+
+    await orgRepository.updateMemberRole(orgId, targetUserId, newRole);
+
+    await auditRepository.create({
+      userId: actorUserId,
+      eventType: 'org_member_role_changed',
+      ipAddress,
+      userAgent,
+      metadata: {
+        orgId,
+        targetUserId,
+        oldRole: targetMembership.role,
+        newRole,
+      },
+    });
+
+    log.info({ orgId, targetUserId, newRole }, 'Member role updated');
+  }
+
+  async removeMember(params: {
+    orgId: string;
+    targetUserId: string;
+    actorUserId: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    const { orgId, targetUserId, actorUserId, ipAddress, userAgent } = params;
+
+    log.info({ orgId, targetUserId }, 'Removing member');
+
+    const targetMembership = await orgRepository.findMembership(
+      orgId,
+      targetUserId
+    );
+    if (!targetMembership) {
+      throw new NotFoundError('NOT_FOUND', 'Member not found in organization');
+    }
+
+    // Can't remove the last owner
+    if (targetMembership.role === 'owner') {
+      const ownerCount = await orgRepository.countOwners(orgId);
+      if (ownerCount <= 1) {
+        throw new ForbiddenError(
+          'FORBIDDEN',
+          'Cannot remove the last owner. Transfer ownership first.'
+        );
+      }
+    }
+
+    // If removing yourself, always allowed (except last owner, handled above)
+    if (targetUserId !== actorUserId) {
+      const actorMembership = await orgRepository.findMembership(
+        orgId,
+        actorUserId
+      );
+      if (!actorMembership) {
+        throw new ForbiddenError(
+          'FORBIDDEN',
+          'You are not a member of this organization'
+        );
+      }
+
+      const ROLE_RANK: Record<string, number> = {
+        owner: 3,
+        admin: 2,
+        member: 1,
+      };
+
+      // Can't remove someone at or above your level
+      if (
+        (ROLE_RANK[targetMembership.role] ?? 0) >=
+        (ROLE_RANK[actorMembership.role] ?? 0)
+      ) {
+        throw new ForbiddenError(
+          'FORBIDDEN',
+          'You cannot remove a member with equal or higher rank'
+        );
+      }
+    }
+
+    // Clear activeOrgId if the removed user had this org active
+    if (targetUserId !== actorUserId) {
+      const user = await userRepository.findById(targetUserId);
+      if (user && user.activeOrgId === orgId) {
+        await userRepository.clearActiveOrgForUser(targetUserId);
+      }
+    }
+
+    await orgRepository.removeMember(orgId, targetUserId);
+
+    await auditRepository.create({
+      userId: actorUserId,
+      eventType: 'org_member_removed',
+      ipAddress,
+      userAgent,
+      metadata: { orgId, targetUserId, role: targetMembership.role },
+    });
+
+    log.info({ orgId, targetUserId }, 'Member removed');
+  }
 }
 
 export const orgService = new OrgService();

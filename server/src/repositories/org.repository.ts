@@ -1,6 +1,6 @@
 import { eq, and, count } from 'drizzle-orm';
 import { db } from '../db/connection';
-import { organizations, orgMembers } from '../db/schema';
+import { organizations, orgMembers, users } from '../db/schema';
 import { NewOrganization, Organization } from '../utils/types';
 import { createLogger } from '../utils/logger';
 
@@ -108,6 +108,61 @@ export class OrgRepository {
       .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
 
     return row ?? null;
+  }
+  // ── List members ───────────────────────────────────────
+  async listMembers(
+    orgId: string
+  ): Promise<
+    {
+      id: string;
+      userId: string;
+      email: string;
+      role: string;
+      joinedAt: Date;
+    }[]
+  > {
+    const rows = await db
+      .select({
+        id: orgMembers.id,
+        userId: orgMembers.userId,
+        email: users.email,
+        role: orgMembers.role,
+        joinedAt: orgMembers.joinedAt,
+      })
+      .from(orgMembers)
+      .innerJoin(users, eq(orgMembers.userId, users.id))
+      .where(eq(orgMembers.orgId, orgId));
+
+    return rows;
+  }
+
+  // ── Update member role ────────────────────────────────
+  async updateMemberRole(
+    orgId: string,
+    userId: string,
+    role: string
+  ): Promise<void> {
+    await db
+      .update(orgMembers)
+      .set({ role })
+      .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
+  }
+
+  // ── Remove member ─────────────────────────────────────
+  async removeMember(orgId: string, userId: string): Promise<void> {
+    await db
+      .delete(orgMembers)
+      .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
+  }
+
+  // ── Count owners in org ───────────────────────────────
+  async countOwners(orgId: string): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(orgMembers)
+      .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.role, 'owner')));
+
+    return result.count;
   }
 }
 

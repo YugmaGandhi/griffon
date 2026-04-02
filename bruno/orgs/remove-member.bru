@@ -1,0 +1,14 @@
+meta {
+  name: Remove Member
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/members/{{userId}}
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
