@@ -14,6 +14,9 @@ declare module 'fastify' {
       email: string;
       roles: string[];
       permissions: string[];
+      orgId: string | null;
+      orgRole: string | null;
+      orgPermissions: string[];
     };
   }
 }
@@ -40,6 +43,9 @@ export async function authenticate(
       email: payload.email,
       roles: payload.roles,
       permissions: payload.permissions,
+      orgId: payload.orgId ?? null,
+      orgRole: payload.orgRole ?? null,
+      orgPermissions: payload.orgPermissions ?? [],
     };
   } catch (err) {
     log.debug({ reqId: request.id, err }, 'Token verification failed');

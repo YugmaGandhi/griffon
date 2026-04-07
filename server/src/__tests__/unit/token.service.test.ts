@@ -8,6 +8,9 @@ const mockUser: TokenUser = {
   email: 'test@example.com',
   roles: ['user'],
   permissions: ['read:profile'],
+  orgId: null,
+  orgRole: null,
+  orgPermissions: [],
 };
 
 describe('TokenService', () => {

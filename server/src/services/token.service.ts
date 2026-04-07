@@ -22,6 +22,9 @@ export type AccessTokenPayload = {
   email: string;
   roles: string[];
   permissions: string[];
+  orgId: string | null;
+  orgRole: string | null;
+  orgPermissions: string[];
   iat: number; // issued at
   exp: number; // expires at
   iss: string; // issuer
@@ -38,6 +41,9 @@ export class TokenService {
       email: user.email,
       roles: user.roles,
       permissions: user.permissions,
+      orgId: user.orgId,
+      orgRole: user.orgRole,
+      orgPermissions: user.orgPermissions,
     })
       .setProtectedHeader({ alg: 'RS256' })
       .setSubject(user.id)

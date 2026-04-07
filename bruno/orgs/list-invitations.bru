@@ -1,0 +1,14 @@
+meta {
+  name: List Invitations
+  type: http
+  seq: 10
+}
+
+get {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/invitations
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

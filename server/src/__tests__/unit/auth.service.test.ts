@@ -52,6 +52,7 @@ const mockSafeUser = {
   oauthProvider: null,
   oauthId: null,
   lastLoginAt: null,
+  activeOrgId: null,
   createdAt: now,
   updatedAt: now,
 };

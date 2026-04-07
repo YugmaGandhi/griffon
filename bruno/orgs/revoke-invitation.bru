@@ -1,0 +1,14 @@
+meta {
+  name: Revoke Invitation
+  type: http
+  seq: 11
+}
+
+delete {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/invitations/{{invitationId}}
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

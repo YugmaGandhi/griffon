@@ -1,0 +1,14 @@
+meta {
+  name: List Members
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/members
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

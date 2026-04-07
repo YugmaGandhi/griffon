@@ -1,0 +1,29 @@
+meta {
+  name: Set Active Org
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/auth/set-active-org
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "orgId": "{{orgId}}"
+  }
+}
+
+script:post-response {
+  // Auto-save new tokens after org switch
+  if (res.status === 200) {
+    bru.setVar("accessToken", res.body.data.accessToken);
+    bru.setVar("refreshToken", res.body.data.refreshToken);
+  }
+}

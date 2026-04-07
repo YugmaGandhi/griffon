@@ -20,7 +20,7 @@ describe('RBAC Routes + Authorize Middleware', () => {
   beforeEach(async () => {
     await redis.flushdb();
     await db.execute(
-      sql`TRUNCATE TABLE audit_logs, refresh_tokens, email_tokens, user_roles, role_permissions, roles, permissions, users RESTART IDENTITY CASCADE`
+      sql`TRUNCATE TABLE audit_logs, refresh_tokens, email_tokens, user_roles, role_permissions, roles, permissions, org_role_permissions, org_member_roles, org_permissions, org_roles, org_invitations, org_members, organizations, users RESTART IDENTITY CASCADE`
     );
     await seedSystemData();
   });
@@ -73,6 +73,9 @@ describe('RBAC Routes + Authorize Middleware', () => {
         'write:roles',
         'read:audit-logs',
       ],
+      orgId: null,
+      orgRole: null,
+      orgPermissions: [],
     };
     return tokenService.generateAccessToken(tokenUser);
   }

@@ -1,0 +1,21 @@
+meta {
+  name: Update Organization
+  type: http
+  seq: 4
+}
+
+patch {
+  url: {{baseUrl}}/api/orgs/{{orgId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "name": "Acme Corp Updated"
+  }
+}

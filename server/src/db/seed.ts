@@ -1,6 +1,13 @@
 import { db } from './connection';
-import { roles, permissions, rolePermissions } from './schema';
-import { eq } from 'drizzle-orm';
+import {
+  roles,
+  permissions,
+  rolePermissions,
+  orgRoles,
+  orgPermissions,
+  orgRolePermissions,
+} from './schema';
+import { eq, and } from 'drizzle-orm';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('Seed');
@@ -107,4 +114,114 @@ export async function seedSystemData(): Promise<void> {
   }
 
   log.info('System data seeded successfully');
+}
+
+// ── Default org roles ───────────────────────────────────
+// Seeded into every new organization on creation
+// isSystem = true prevents accidental deletion
+const DEFAULT_ORG_ROLES = [
+  { name: 'owner', description: 'Full control over the organization' },
+  { name: 'admin', description: 'Manage members, roles, and org settings' },
+  { name: 'member', description: 'Default role for new members' },
+] as const;
+
+// ── Default org permissions ─────────────────────────────
+// These map to authorizeOrg() checks in org-scoped routes
+const DEFAULT_ORG_PERMISSIONS = [
+  { name: 'read:org', resource: 'org', action: 'read' },
+  { name: 'write:org', resource: 'org', action: 'write' },
+  { name: 'delete:org', resource: 'org', action: 'delete' },
+  { name: 'read:members', resource: 'members', action: 'read' },
+  { name: 'write:members', resource: 'members', action: 'write' },
+  { name: 'read:org-roles', resource: 'org-roles', action: 'read' },
+  { name: 'write:org-roles', resource: 'org-roles', action: 'write' },
+  { name: 'read:org-audit', resource: 'org-audit', action: 'read' },
+] as const;
+
+// ── Default org role → permission mappings ──────────────
+// owner gets everything, admin gets most, member gets read-only
+const DEFAULT_ORG_ROLE_PERMISSIONS: Record<string, string[]> = {
+  owner: [
+    'read:org',
+    'write:org',
+    'delete:org',
+    'read:members',
+    'write:members',
+    'read:org-roles',
+    'write:org-roles',
+    'read:org-audit',
+  ],
+  admin: [
+    'read:org',
+    'write:org',
+    'read:members',
+    'write:members',
+    'read:org-roles',
+    'write:org-roles',
+    'read:org-audit',
+  ],
+  member: ['read:org', 'read:members'],
+};
+
+/**
+ * Seeds default roles and permissions for a newly created organization.
+ *
+ * Idempotent — uses composite unique index (orgId, name) via onConflictDoNothing.
+ * Called from OrgService.create() after the org row is inserted.
+ *
+ * Why per-org instead of shared?
+ * Each org gets its own copy so they can customize independently.
+ * Org A's "billing-admin" doesn't leak into Org B.
+ */
+export async function seedOrgDefaults(orgId: string): Promise<void> {
+  log.info({ orgId }, 'Seeding org defaults...');
+
+  // Step 1 — Insert default org roles
+  for (const role of DEFAULT_ORG_ROLES) {
+    await db
+      .insert(orgRoles)
+      .values({ orgId, ...role, isSystem: true })
+      .onConflictDoNothing();
+  }
+
+  // Step 2 — Insert default org permissions
+  for (const perm of DEFAULT_ORG_PERMISSIONS) {
+    await db
+      .insert(orgPermissions)
+      .values({ orgId, ...perm })
+      .onConflictDoNothing();
+  }
+
+  // Step 3 — Map permissions to roles
+  for (const [roleName, permNames] of Object.entries(
+    DEFAULT_ORG_ROLE_PERMISSIONS
+  )) {
+    const [role] = await db
+      .select({ id: orgRoles.id })
+      .from(orgRoles)
+      .where(and(eq(orgRoles.orgId, orgId), eq(orgRoles.name, roleName)));
+
+    if (!role) continue;
+
+    for (const permName of permNames) {
+      const [perm] = await db
+        .select({ id: orgPermissions.id })
+        .from(orgPermissions)
+        .where(
+          and(
+            eq(orgPermissions.orgId, orgId),
+            eq(orgPermissions.name, permName)
+          )
+        );
+
+      if (!perm) continue;
+
+      await db
+        .insert(orgRolePermissions)
+        .values({ orgRoleId: role.id, orgPermissionId: perm.id })
+        .onConflictDoNothing();
+    }
+  }
+
+  log.info({ orgId }, 'Org defaults seeded successfully');
 }

@@ -4,6 +4,7 @@ import { createLogger } from '../utils/logger';
 import {
   verificationEmailTemplate,
   passwordResetEmailTemplate,
+  orgInvitationEmailTemplate,
 } from '../utils/email-templates';
 
 const log = createLogger('EmailService');
@@ -81,6 +82,45 @@ export class EmailService {
     } catch (err) {
       log.error({ err, email }, 'Failed to send password reset email');
       throw new Error('Failed to send password reset email');
+    }
+  }
+  async sendOrgInvitationEmail(params: {
+    email: string;
+    token: string;
+    orgName: string;
+    invitedByEmail: string;
+    role: string;
+  }): Promise<void> {
+    const invitationUrl = `${env.APP_BASE_URL}/auth/accept-invitation?token=${params.token}`;
+    const template = orgInvitationEmailTemplate({
+      email: params.email,
+      invitationUrl,
+      orgName: params.orgName,
+      invitedByEmail: params.invitedByEmail,
+      role: params.role,
+    });
+
+    log.info(
+      { email: params.email, orgName: params.orgName },
+      'Sending org invitation email'
+    );
+
+    try {
+      await this.transporter.sendMail({
+        from: `"${env.EMAIL_FROM_NAME}" <${env.EMAIL_FROM}>`,
+        to: params.email,
+        subject: template.subject,
+        html: template.html,
+        text: template.text,
+      });
+
+      log.info({ email: params.email }, 'Org invitation email sent');
+    } catch (err) {
+      log.error(
+        { err, email: params.email },
+        'Failed to send org invitation email'
+      );
+      throw new Error('Failed to send invitation email');
     }
   }
 }

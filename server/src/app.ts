@@ -11,6 +11,7 @@ import { oauthRoutes } from './routes/oauth.routes';
 import { buildErrorResponse } from './utils/response';
 import { rbacRoutes } from './routes/rbac.routes';
 import { adminRoutes } from './routes/admin.routes';
+import { orgRoutes } from './routes/org.routes';
 import { pool } from './db/connection';
 import { seedSystemData } from './db/seed';
 import {
@@ -159,6 +160,7 @@ export async function buildApp() {
 
   void app.register(rbacRoutes, { prefix: '/api' });
   void app.register(adminRoutes, { prefix: '/api/admin' });
+  void app.register(orgRoutes, { prefix: '/api/orgs' });
 
   // ── Error Handlers ──────────────────────────────────────
   app.setNotFoundHandler((request, reply) => {

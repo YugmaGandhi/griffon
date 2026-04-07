@@ -1,0 +1,21 @@
+meta {
+  name: Accept Invitation
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/auth/accept-invitation
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "token": "paste-invitation-token-here"
+  }
+}

@@ -1,0 +1,14 @@
+meta {
+  name: Get Organization
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/orgs/{{orgId}}
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

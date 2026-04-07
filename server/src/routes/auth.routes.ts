@@ -1,6 +1,7 @@
 import { FastifyInstance, FastifyPluginCallback } from 'fastify';
 import { z } from 'zod';
 import { authService } from '../services/auth.service';
+import { orgService } from '../services/org.service';
 import { isAppError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
 import {
@@ -275,6 +276,100 @@ const authRoutes: FastifyPluginCallback = (
       throw err;
     }
   });
+  // ── POST /auth/accept-invitation — Accept org invite ───
+  app.post(
+    '/accept-invitation',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const parsed = z
+        .object({
+          token: z.string().min(1, 'Invitation token is required'),
+        })
+        .safeParse(request.body);
+
+      if (!parsed.success) {
+        return sendValidationError(
+          reply,
+          parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+          }))
+        );
+      }
+
+      try {
+        const result = await orgService.acceptInvitation({
+          token: parsed.data.token,
+          userId: request.user!.id,
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+
+        return sendSuccess(reply, {
+          message: 'Invitation accepted successfully',
+          organization: {
+            id: result.orgId,
+            name: result.orgName,
+            slug: result.orgSlug,
+            role: result.role,
+          },
+        });
+      } catch (err) {
+        if (isAppError(err)) {
+          return sendError(reply, err.statusCode, err.code, err.message);
+        }
+        log.error(
+          { err, reqId: request.id },
+          'Unexpected error accepting invitation'
+        );
+        throw err;
+      }
+    }
+  );
+
+  // ── POST /auth/set-active-org — Switch active org ──────
+  app.post(
+    '/set-active-org',
+    { preHandler: [authenticate] },
+    async (request, reply) => {
+      const parsed = z
+        .object({
+          orgId: z.string().uuid('Invalid organization ID'),
+        })
+        .safeParse(request.body);
+
+      if (!parsed.success) {
+        return sendValidationError(
+          reply,
+          parsed.error.issues.map((issue) => ({
+            field: issue.path.join('.'),
+            message: issue.message,
+          }))
+        );
+      }
+
+      try {
+        const result = await authService.setActiveOrg({
+          userId: request.user!.id,
+          orgId: parsed.data.orgId,
+          ipAddress: request.ip,
+          userAgent: request.headers['user-agent'],
+        });
+
+        return sendSuccess(reply, result);
+      } catch (err) {
+        if (isAppError(err)) {
+          return sendError(reply, err.statusCode, err.code, err.message);
+        }
+        log.error(
+          { err, reqId: request.id },
+          'Unexpected error switching active org'
+        );
+        throw err;
+      }
+    }
+  );
+
   // Tell Fastify this plugin has finished registering
   done();
 };

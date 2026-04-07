@@ -1,0 +1,22 @@
+meta {
+  name: Invite Member
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/members/invite
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "email": "member@example.com",
+    "role": "member"
+  }
+}

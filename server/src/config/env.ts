@@ -51,6 +51,13 @@ export const envSchema = z.object({
   GITHUB_CLIENT_SECRET: z.string().optional(),
   MICROSOFT_CLIENT_ID: z.string().optional(),
   MICROSOFT_CLIENT_SECRET: z.string().optional(),
+  // Organizations
+  ALLOW_ORG_CREATION: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((v) => v === 'true'),
+  MAX_ORGS_PER_USER: z.coerce.number().default(10),
+
   OAUTH_CALLBACK_BASE_URL: z.string().default('http://localhost:3000'),
   OAUTH_SUCCESS_REDIRECT: z.string().default('http://localhost:3001/dashboard'),
   OAUTH_FAILURE_REDIRECT: z.string().default('http://localhost:3001/login'),
