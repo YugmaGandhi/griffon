@@ -161,6 +161,34 @@ export class OrgRepository {
       .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
   }
 
+  // ── Transfer ownership (atomic swap) ─────────────────
+  // Promotes newOwnerId to 'owner' and demotes currentOwnerId to 'admin'
+  // Wrapped in a transaction so both updates succeed or both roll back
+  async transferOwnership(
+    orgId: string,
+    newOwnerId: string,
+    currentOwnerId: string
+  ): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(orgMembers)
+        .set({ role: 'owner' })
+        .where(
+          and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, newOwnerId))
+        );
+
+      await tx
+        .update(orgMembers)
+        .set({ role: 'admin' })
+        .where(
+          and(
+            eq(orgMembers.orgId, orgId),
+            eq(orgMembers.userId, currentOwnerId)
+          )
+        );
+    });
+  }
+
   // ── Count owners in org ───────────────────────────────
   async countOwners(orgId: string): Promise<number> {
     const [result] = await db

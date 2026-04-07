@@ -537,6 +537,69 @@ export class OrgService {
     };
   }
 
+  async transferOwnership(params: {
+    orgId: string;
+    newOwnerId: string;
+    actorUserId: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<void> {
+    const { orgId, newOwnerId, actorUserId, ipAddress, userAgent } = params;
+
+    log.info({ orgId, newOwnerId, actorUserId }, 'Transferring ownership');
+
+    // Check org exists
+    const org = await orgRepository.findById(orgId);
+    if (!org) {
+      throw new NotFoundError('NOT_FOUND', 'Organization not found');
+    }
+
+    // Caller must be owner
+    const actorMembership = await orgRepository.findMembership(
+      orgId,
+      actorUserId
+    );
+    if (!actorMembership || actorMembership.role !== 'owner') {
+      throw new ForbiddenError(
+        'FORBIDDEN',
+        'Only the organization owner can transfer ownership'
+      );
+    }
+
+    // Can't transfer to yourself
+    if (newOwnerId === actorUserId) {
+      throw new ConflictError(
+        'INVALID_TRANSFER',
+        'You are already the owner of this organization'
+      );
+    }
+
+    // New owner must be an existing member
+    const newOwnerMembership = await orgRepository.findMembership(
+      orgId,
+      newOwnerId
+    );
+    if (!newOwnerMembership) {
+      throw new NotFoundError(
+        'NOT_FOUND',
+        'The specified user is not a member of this organization'
+      );
+    }
+
+    // Atomic swap: promote new owner, demote current owner to admin
+    await orgRepository.transferOwnership(orgId, newOwnerId, actorUserId);
+
+    await auditRepository.create({
+      userId: actorUserId,
+      eventType: 'org_member_role_changed',
+      ipAddress,
+      userAgent,
+      metadata: { orgId, newOwnerId, previousOwner: actorUserId },
+    });
+
+    log.info({ orgId, newOwnerId }, 'Ownership transferred');
+  }
+
   async listInvitations(orgId: string) {
     return invitationRepository.listPending(orgId);
   }

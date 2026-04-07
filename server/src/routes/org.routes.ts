@@ -307,6 +307,59 @@ const orgRoutes: FastifyPluginCallback = (
     }
   });
 
+  // ── PATCH /api/orgs/:orgId/transfer-ownership ─────────
+  app.patch('/:orgId/transfer-ownership', async (request, reply) => {
+    const paramsParsed = orgIdParamSchema.safeParse(request.params);
+    if (!paramsParsed.success) {
+      return sendValidationError(
+        reply,
+        paramsParsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        }))
+      );
+    }
+
+    const bodyParsed = z
+      .object({
+        newOwnerId: z.string().uuid('Invalid user ID'),
+      })
+      .safeParse(request.body);
+
+    if (!bodyParsed.success) {
+      return sendValidationError(
+        reply,
+        bodyParsed.error.issues.map((issue) => ({
+          field: issue.path.join('.'),
+          message: issue.message,
+        }))
+      );
+    }
+
+    try {
+      await orgService.transferOwnership({
+        orgId: paramsParsed.data.orgId,
+        newOwnerId: bodyParsed.data.newOwnerId,
+        actorUserId: request.user!.id,
+        ipAddress: request.ip,
+        userAgent: request.headers['user-agent'],
+      });
+
+      return sendSuccess(reply, {
+        message: 'Ownership transferred successfully',
+      });
+    } catch (err) {
+      if (isAppError(err)) {
+        return sendError(reply, err.statusCode, err.code, err.message);
+      }
+      log.error(
+        { err, reqId: request.id },
+        'Unexpected error transferring ownership'
+      );
+      throw err;
+    }
+  });
+
   // ── POST /api/orgs/:orgId/members/invite — Invite member
   app.post('/:orgId/members/invite', async (request, reply) => {
     const paramsParsed = orgIdParamSchema.safeParse(request.params);

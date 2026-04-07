@@ -1,0 +1,21 @@
+meta {
+  name: Transfer Ownership
+  type: http
+  seq: 12
+}
+
+patch {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/transfer-ownership
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "newOwnerId": "{{userId}}"
+  }
+}
