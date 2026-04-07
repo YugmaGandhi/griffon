@@ -10,7 +10,7 @@
     <a href="https://github.com/YugmaGandhi/vaultauth/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" />
     </a>
-    <img src="https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen" alt="Node 20+" />
+    <img src="https://img.shields.io/badge/node-%3E%3D24.0.0-brightgreen" alt="Node 24+" />
     <img src="https://img.shields.io/badge/TypeScript-strict-blue" alt="TypeScript" />
   </p>
 </div>
@@ -25,6 +25,7 @@ VaultAuth is a production-grade authentication service you deploy yourself. It g
 - **OAuth2** — Google, GitHub, Microsoft (extensible to any provider)
 - **JWT** with RS256 signing and automatic refresh token rotation
 - **RBAC** — roles and permissions embedded in tokens
+- **Multi-organization support** — users belong to multiple orgs, org-scoped roles and permissions in every token
 - **Email flows** — verification and password reset
 - **Rate limiting** — Redis-backed, distributed
 - **Audit logs** — every auth event tracked
@@ -102,13 +103,32 @@ Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/auth/register` | Create account |
-| POST | `/auth/login` | Login, returns JWT + refresh token |
+| POST | `/auth/login` | Login, returns JWT + refresh token + org list |
 | POST | `/auth/logout` | Revoke refresh token |
 | POST | `/auth/refresh` | Rotate refresh token |
 | GET | `/auth/me` | Get current user |
 | GET | `/auth/verify-email` | Verify email address |
 | POST | `/auth/forgot-password` | Send reset email |
 | POST | `/auth/reset-password` | Reset password |
+| POST | `/auth/set-active-org` | Switch active org, returns new token pair |
+| POST | `/auth/accept-invitation` | Accept org invitation |
+
+### Organizations
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/orgs` | Create organization |
+| GET | `/api/orgs` | List user's organizations |
+| GET | `/api/orgs/:orgId` | Get org details |
+| PATCH | `/api/orgs/:orgId` | Update org name, slug, logo |
+| DELETE | `/api/orgs/:orgId` | Delete org (owner only) |
+| GET | `/api/orgs/:orgId/members` | List members |
+| PATCH | `/api/orgs/:orgId/members/:userId` | Update member role |
+| DELETE | `/api/orgs/:orgId/members/:userId` | Remove member |
+| POST | `/api/orgs/:orgId/members/invite` | Invite member by email |
+| GET | `/api/orgs/:orgId/invitations` | List pending invitations |
+| DELETE | `/api/orgs/:orgId/invitations/:id` | Revoke invitation |
+| PATCH | `/api/orgs/:orgId/transfer-ownership` | Transfer ownership |
 
 ### OAuth
 

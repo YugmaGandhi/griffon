@@ -9,7 +9,7 @@ you need to get started.
 
 ### Prerequisites
 
-- Node.js 20+
+- Node.js 24+
 - Docker Desktop
 - Git
 
