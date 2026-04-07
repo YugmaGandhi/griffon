@@ -1,8 +1,9 @@
 import { userRepository } from '../repositories/user.repository';
+import { orgRepository } from '../repositories/org.repository';
 import { auditRepository } from '../repositories/audit.repository';
 import { passwordService } from './password.service';
 import { AuthError, ConflictError, ForbiddenError } from '../utils/errors';
-import { SafeUser, TokenUser, toSafeUser } from '../utils/types';
+import { Organization, SafeUser, TokenUser, toSafeUser } from '../utils/types';
 import { createLogger } from '../utils/logger';
 import { tokenService } from './token.service';
 import { tokenRepository } from '../repositories/token.repository';
@@ -44,9 +45,40 @@ type LoginResult = {
   refreshToken: string;
   expiresIn: number;
   user: SafeUser & { roles: string[]; permissions: string[] };
+  organizations: (Organization & { role: string; joinedAt: Date })[];
 };
 
 export class AuthService {
+  // ── Resolve org claims from user's activeOrgId ────────
+  // Called before every token generation. Reads activeOrgId from the user
+  // record and resolves their org role + custom role permissions.
+  // Returns null fields if user has no active org.
+  private async resolveOrgContext(
+    userId: string,
+    activeOrgId: string | null
+  ): Promise<{
+    orgId: string | null;
+    orgRole: string | null;
+    orgPermissions: string[];
+  }> {
+    if (!activeOrgId) {
+      return { orgId: null, orgRole: null, orgPermissions: [] };
+    }
+
+    const ctx = await orgRepository.getMemberOrgContext(activeOrgId, userId);
+    if (!ctx) {
+      // activeOrgId set but user is no longer a member — clear it gracefully
+      await userRepository.setActiveOrg(userId, null);
+      return { orgId: null, orgRole: null, orgPermissions: [] };
+    }
+
+    return {
+      orgId: activeOrgId,
+      orgRole: ctx.role,
+      orgPermissions: ctx.permissions,
+    };
+  }
+
   async register(params: RegisterParams): Promise<RegisterResult> {
     const { email, password, ipAddress, userAgent } = params;
 
@@ -189,15 +221,14 @@ export class AuthService {
     const { roles, permissions } = await rbacService.getUserRolesAndPermissions(
       user.id
     );
+    const orgContext = await this.resolveOrgContext(user.id, user.activeOrgId);
 
     const tokenUser: TokenUser = {
       id: user.id,
       email: user.email,
       roles,
       permissions,
-      orgId: null,
-      orgRole: null,
-      orgPermissions: [],
+      ...orgContext,
     };
 
     const accessToken = await tokenService.generateAccessToken(tokenUser);
@@ -232,6 +263,8 @@ export class AuthService {
     // Access token expires in 15 minutes = 900 seconds
     const expiresIn = 900;
 
+    const organizations = await orgRepository.findByUserId(user.id);
+
     return {
       accessToken,
       refreshToken: rawRefreshToken,
@@ -241,6 +274,7 @@ export class AuthService {
         roles: tokenUser.roles,
         permissions: tokenUser.permissions,
       },
+      organizations,
     };
   }
 
@@ -278,7 +312,7 @@ export class AuthService {
     refreshToken: string;
     ipAddress?: string;
     userAgent?: string;
-  }): Promise<Omit<LoginResult, 'user'>> {
+  }): Promise<Omit<LoginResult, 'user' | 'organizations'>> {
     const { refreshToken, ipAddress, userAgent } = params;
 
     log.info('Token refresh attempt');
@@ -317,15 +351,14 @@ export class AuthService {
     const { roles, permissions } = await rbacService.getUserRolesAndPermissions(
       user.id
     );
+    const orgContext = await this.resolveOrgContext(user.id, user.activeOrgId);
 
     const tokenUser: TokenUser = {
       id: user.id,
       email: user.email,
       roles,
       permissions,
-      orgId: null,
-      orgRole: null,
-      orgPermissions: [],
+      ...orgContext,
     };
 
     const newAccessToken = await tokenService.generateAccessToken(tokenUser);
@@ -531,15 +564,17 @@ export class AuthService {
     const { roles, permissions } = await rbacService.getUserRolesAndPermissions(
       user.id
     );
+    const orgContext = await this.resolveOrgContext(
+      user.id,
+      user.activeOrgId ?? null
+    );
 
     const tokenUser: TokenUser = {
       id: user.id,
       email: user.email,
       roles,
       permissions,
-      orgId: null,
-      orgRole: null,
-      orgPermissions: [],
+      ...orgContext,
     };
 
     const accessToken = await tokenService.generateAccessToken(tokenUser);
@@ -570,6 +605,8 @@ export class AuthService {
       'OAuth login successful'
     );
 
+    const organizations = await orgRepository.findByUserId(user.id);
+
     return {
       accessToken,
       refreshToken: rawRefreshToken,
@@ -579,7 +616,74 @@ export class AuthService {
         roles: tokenUser.roles,
         permissions: tokenUser.permissions,
       },
+      organizations,
     };
+  }
+
+  async setActiveOrg(params: {
+    userId: string;
+    orgId: string;
+    ipAddress?: string;
+    userAgent?: string;
+  }): Promise<{
+    accessToken: string;
+    refreshToken: string;
+    expiresIn: number;
+  }> {
+    const { userId, orgId, ipAddress, userAgent } = params;
+
+    log.info({ userId, orgId }, 'Switching active org');
+
+    // Verify the user is actually a member of the requested org
+    const membership = await orgRepository.findMembership(orgId, userId);
+    if (!membership) {
+      throw new ForbiddenError(
+        'FORBIDDEN',
+        'You are not a member of this organization'
+      );
+    }
+
+    // Persist the new active org
+    await userRepository.setActiveOrg(userId, orgId);
+
+    // Re-load user for email field
+    const user = await userRepository.findById(userId);
+
+    const { roles, permissions } =
+      await rbacService.getUserRolesAndPermissions(userId);
+    const orgContext = await this.resolveOrgContext(userId, orgId);
+
+    const tokenUser: TokenUser = {
+      id: userId,
+      email: user!.email,
+      roles,
+      permissions,
+      ...orgContext,
+    };
+
+    const accessToken = await tokenService.generateAccessToken(tokenUser);
+    const rawRefreshToken = tokenService.generateRefreshToken();
+    const refreshTokenHash = tokenService.hashRefreshToken(rawRefreshToken);
+
+    await tokenRepository.create({
+      userId,
+      tokenHash: refreshTokenHash,
+      deviceInfo: userAgent,
+      ipAddress,
+      expiresAt: tokenService.getRefreshTokenExpiry(),
+    });
+
+    await auditRepository.create({
+      userId,
+      eventType: 'org_switched',
+      ipAddress,
+      userAgent,
+      metadata: { orgId },
+    });
+
+    log.info({ userId, orgId }, 'Active org switched');
+
+    return { accessToken, refreshToken: rawRefreshToken, expiresIn: 900 };
   }
 }
 

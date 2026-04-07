@@ -1,6 +1,14 @@
 import { eq, and, count } from 'drizzle-orm';
 import { db } from '../db/connection';
-import { organizations, orgMembers, users } from '../db/schema';
+import {
+  organizations,
+  orgMembers,
+  orgMemberRoles,
+  orgRoles,
+  orgRolePermissions,
+  orgPermissions,
+  users,
+} from '../db/schema';
 import { NewOrganization, Organization } from '../utils/types';
 import { createLogger } from '../utils/logger';
 
@@ -161,6 +169,41 @@ export class OrgRepository {
       .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.role, 'owner')));
 
     return result.count;
+  }
+
+  // ── Get member's org context for JWT ─────────────────
+  // Returns the member's built-in role + all permission names from
+  // their custom org roles (orgMemberRoles → orgRoles → orgRolePermissions → orgPermissions)
+  async getMemberOrgContext(
+    orgId: string,
+    userId: string
+  ): Promise<{ role: string; permissions: string[] } | null> {
+    const rows = await db
+      .select({
+        role: orgMembers.role,
+        permissionName: orgPermissions.name,
+      })
+      .from(orgMembers)
+      .leftJoin(orgMemberRoles, eq(orgMemberRoles.orgMemberId, orgMembers.id))
+      .leftJoin(orgRoles, eq(orgRoles.id, orgMemberRoles.orgRoleId))
+      .leftJoin(
+        orgRolePermissions,
+        eq(orgRolePermissions.orgRoleId, orgRoles.id)
+      )
+      .leftJoin(
+        orgPermissions,
+        eq(orgPermissions.id, orgRolePermissions.orgPermissionId)
+      )
+      .where(and(eq(orgMembers.orgId, orgId), eq(orgMembers.userId, userId)));
+
+    if (rows.length === 0) return null;
+
+    return {
+      role: rows[0].role,
+      permissions: rows
+        .map((r) => r.permissionName)
+        .filter((name): name is string => name !== null),
+    };
   }
 }
 
