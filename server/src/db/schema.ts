@@ -43,6 +43,9 @@ export const auditEventTypeEnum = pgEnum('audit_event_type', [
   'org_switched',
   'session_revoked',
   'all_sessions_revoked',
+  'user_disabled',
+  'user_enabled',
+  'user_created_by_admin',
 ]);
 
 export const orgInvitationStatusEnum = pgEnum('org_invitation_status', [
@@ -74,6 +77,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).notNull().unique(),
   passwordHash: varchar('password_hash', { length: 255 }),
   isVerified: boolean('is_verified').notNull().default(false),
+  isDisabled: boolean('is_disabled').notNull().default(false),
   isLocked: boolean('is_locked').notNull().default(false),
   failedAttempts: integer('failed_attempts').notNull().default(0),
   lockedUntil: timestamp('locked_until', { withTimezone: true }),
