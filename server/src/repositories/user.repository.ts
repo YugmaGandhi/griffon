@@ -1,4 +1,4 @@
-import { eq, sql, and } from 'drizzle-orm';
+import { eq, sql, and, ilike, count, desc } from 'drizzle-orm';
 import { db } from '../db/connection';
 import { users } from '../db/schema';
 import { NewUser, User, SafeUser, toSafeUser } from '../utils/types';
@@ -174,6 +174,72 @@ export class UserRepository {
       .update(users)
       .set({ activeOrgId: null, updatedAt: new Date() })
       .where(eq(users.id, userId));
+  }
+
+  // ── Find All Paginated (admin) ────────────────────────
+  async findAllPaginated(params: {
+    page: number;
+    limit: number;
+    email?: string;
+    isDisabled?: boolean;
+    isLocked?: boolean;
+  }): Promise<{ users: SafeUser[]; total: number }> {
+    const { page, limit, email, isDisabled, isLocked } = params;
+    const offset = (page - 1) * limit;
+
+    const conditions = [];
+    if (email) conditions.push(ilike(users.email, `%${email}%`));
+    if (isDisabled !== undefined)
+      conditions.push(eq(users.isDisabled, isDisabled));
+    if (isLocked !== undefined) conditions.push(eq(users.isLocked, isLocked));
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [{ total }] = await db
+      .select({ total: count() })
+      .from(users)
+      .where(where);
+
+    const rows = await db
+      .select()
+      .from(users)
+      .where(where)
+      .orderBy(desc(users.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    return { users: rows.map(toSafeUser), total };
+  }
+
+  // ── Update User (admin) ───────────────────────────────
+  async updateUser(
+    id: string,
+    data: { email?: string; isVerified?: boolean }
+  ): Promise<SafeUser | null> {
+    const [user] = await db
+      .update(users)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+
+    return user ? toSafeUser(user) : null;
+  }
+
+  // ── Disable / Enable (admin) ──────────────────────────
+  async disableUser(id: string): Promise<void> {
+    log.warn({ userId: id }, 'Disabling user account');
+    await db
+      .update(users)
+      .set({ isDisabled: true, updatedAt: new Date() })
+      .where(eq(users.id, id));
+  }
+
+  async enableUser(id: string): Promise<void> {
+    log.info({ userId: id }, 'Enabling user account');
+    await db
+      .update(users)
+      .set({ isDisabled: false, updatedAt: new Date() })
+      .where(eq(users.id, id));
   }
 
   // ── Link OAuth to existing account ────────────────────────

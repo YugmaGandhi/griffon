@@ -2,6 +2,7 @@ import { FastifyRequest, FastifyReply } from 'fastify';
 import { tokenService } from '../services/token.service';
 import { sendUnauthorized } from '../utils/response';
 import { createLogger } from '../utils/logger';
+import { redis } from '../db/redis';
 
 const log = createLogger('AuthMiddleware');
 
@@ -36,6 +37,24 @@ export async function authenticate(
 
   try {
     const payload = await tokenService.verifyAccessToken(token);
+
+    // Check Redis blocklist — set when admin disables a user
+    // Fail open if Redis is unavailable to avoid an auth outage
+    try {
+      const isBlocked = await redis.exists(`blocklist:user:${payload.sub}`);
+      if (isBlocked) {
+        return sendUnauthorized(
+          reply,
+          'USER_DISABLED',
+          'Your account has been disabled. Please contact support.'
+        );
+      }
+    } catch {
+      log.warn(
+        { userId: payload.sub },
+        'Redis blocklist check failed — failing open'
+      );
+    }
 
     // Attach decoded user to request — available in all route handlers
     request.user = {

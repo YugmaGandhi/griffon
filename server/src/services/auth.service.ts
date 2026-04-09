@@ -164,7 +164,16 @@ export class AuthService {
       await userRepository.resetFailedAttempts(user.id);
     }
 
-    // Step 3 — Check email verified
+    // Step 3 — Check if account is disabled by admin
+    if (user.isDisabled) {
+      log.warn({ userId: user.id }, 'Login failed — account disabled');
+      throw new ForbiddenError(
+        'ACCOUNT_DISABLED',
+        'Your account has been disabled. Please contact support.'
+      );
+    }
+
+    // Step 4 — Check email verified
     if (!user.isVerified) {
       log.warn({ userId: user.id }, 'Login failed — email not verified');
       throw new ForbiddenError(
@@ -173,7 +182,7 @@ export class AuthService {
       );
     }
 
-    // Step 4 — Verify password
+    // Step 5 — Verify password
     const passwordValid = await passwordService.verify(
       password,
       user.passwordHash ?? ''
@@ -218,7 +227,7 @@ export class AuthService {
       throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
     }
 
-    // Step 5 — Generate tokens
+    // Step 6 — Generate tokens
     const { roles, permissions } = await rbacService.getUserRolesAndPermissions(
       user.id
     );
@@ -236,7 +245,7 @@ export class AuthService {
     const rawRefreshToken = tokenService.generateRefreshToken();
     const refreshTokenHash = tokenService.hashRefreshToken(rawRefreshToken);
 
-    // Step 6 — Store refresh token
+    // Step 7 — Store refresh token
     const session = await tokenRepository.create({
       userId: user.id,
       tokenHash: refreshTokenHash,
@@ -245,11 +254,11 @@ export class AuthService {
       expiresAt: tokenService.getRefreshTokenExpiry(),
     });
 
-    // Step 7 — Reset failed attempts + update last login
+    // Step 8 — Reset failed attempts + update last login
     await userRepository.resetFailedAttempts(user.id);
     await userRepository.updateLastLogin(user.id);
 
-    // Step 8 — Audit log
+    // Step 9 — Audit log
     await auditRepository.create({
       userId: user.id,
       eventType: 'user_login',
