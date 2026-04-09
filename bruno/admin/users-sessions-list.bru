@@ -1,0 +1,14 @@
+meta {
+  name: List User Sessions (Admin)
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{baseUrl}}/api/admin/users/{{userId}}/sessions
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

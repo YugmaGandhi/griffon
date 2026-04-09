@@ -1,0 +1,14 @@
+meta {
+  name: Enable User
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/admin/users/{{userId}}/enable
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
