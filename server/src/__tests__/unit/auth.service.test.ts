@@ -46,6 +46,7 @@ const mockSafeUser = {
   id: '550e8400-e29b-41d4-a716-446655440000',
   email: 'test@example.com',
   isVerified: true,
+  isDisabled: false,
   isLocked: false,
   failedAttempts: 0,
   lockedUntil: null,
@@ -247,6 +248,18 @@ describe('AuthService', () => {
         mockFullUser.id
       );
       expect(result.accessToken).toBe('mock-access-token');
+    });
+
+    it('should throw ForbiddenError when account is disabled by admin', async () => {
+      const disabledUser = { ...mockFullUser, isDisabled: true };
+      mockUserRepo.findByEmail.mockResolvedValue(disabledUser);
+
+      await expect(
+        authService.login({
+          email: 'test@example.com',
+          password: 'StrongPass123!',
+        })
+      ).rejects.toThrow(ForbiddenError);
     });
 
     it('should throw ForbiddenError when email not verified', async () => {
