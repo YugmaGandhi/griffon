@@ -1,0 +1,29 @@
+meta {
+  name: Register Webhook Endpoint
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/webhooks
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "url": "https://example.com/webhook",
+    "events": ["user.login", "org.member.joined"]
+  }
+}
+
+script:post-response {
+  if (res.status === 201) {
+    bru.setVar("webhookEndpointId", res.body.data.endpoint.id);
+    bru.setVar("webhookSecret", res.body.data.secret);
+  }
+}

@@ -1,0 +1,21 @@
+meta {
+  name: Update Webhook Endpoint
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/webhooks/{{webhookEndpointId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "isActive": false
+  }
+}

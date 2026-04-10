@@ -29,6 +29,7 @@ VaultAuth is a production-grade authentication service you deploy yourself. It g
 - **Session management** — list and revoke active sessions, self-service or admin-controlled
 - **User management** — admin API to create, update, disable, enable, and force-delete users
 - **Account deletion** — GDPR-compliant self-service deletion with 30-day grace period and admin force-delete
+- **Webhook events** — subscribe to auth and org events via HTTPS callbacks, HMAC-signed with exponential backoff retry
 - **Email flows** — verification and password reset
 - **Rate limiting** — Redis-backed, distributed
 - **Audit logs** — every auth event tracked
@@ -158,6 +159,19 @@ Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to 
 | GET | `/api/admin/users/:id/sessions` | View active sessions for a user |
 | DELETE | `/api/admin/users/:id/sessions` | Revoke all sessions for a user |
 | POST | `/api/admin/users/:id/delete` | Permanently delete a user (immediate, irreversible) |
+
+### Webhooks
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/orgs/:orgId/webhooks` | Register webhook endpoint (returns signing secret once) |
+| GET | `/api/orgs/:orgId/webhooks` | List endpoints for an org |
+| PATCH | `/api/orgs/:orgId/webhooks/:id` | Update URL, events, or active state |
+| DELETE | `/api/orgs/:orgId/webhooks/:id` | Delete endpoint (cascades deliveries) |
+| GET | `/api/orgs/:orgId/webhooks/:id/deliveries` | View delivery log |
+| POST | `/api/orgs/:orgId/webhooks/:id/test` | Send a test event |
+
+**Events emitted:** `user.login`, `org.member.joined`, `org.member.removed`, `webhook.test`
 
 ### Admin — RBAC & Audit
 

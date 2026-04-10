@@ -1,0 +1,15 @@
+meta {
+  name: List Webhook Deliveries
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/webhooks/{{webhookEndpointId}}/deliveries
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

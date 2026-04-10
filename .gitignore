@@ -37,3 +37,6 @@ bruno/environments/staging.bru
 
 #claude code setting
 .claude/
+
+#temp docs
+docs/

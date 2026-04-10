@@ -1,0 +1,15 @@
+meta {
+  name: Send Test Webhook Event
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/api/orgs/{{orgId}}/webhooks/{{webhookEndpointId}}/test
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

@@ -58,6 +58,13 @@ Tokens are signed with **RS256** (asymmetric RSA):
 - Redis check is fail-open: if Redis is down, the request proceeds (access tokens expire in 15 minutes anyway)
 - Blocklist key TTL matches refresh token lifetime (30 days)
 
+### Webhook Signing
+- Every delivery includes `X-VaultAuth-Signature: sha256=<hmac-sha256-hex>`
+- HMAC key is the endpoint's signing secret (32 cryptographically random bytes)
+- Secret shown once at registration — encrypted at rest with AES-256-GCM using `WEBHOOK_SECRET_KEY`
+- Only HTTPS URLs accepted — HTTP is rejected at registration
+- Failed deliveries retry with exponential backoff: 5s → 30s → 2m → 10m → 30m → 2h (max 6 attempts)
+
 ### Account Deletion (GDPR)
 - Self-service deletion has a 30-day grace period — users can cancel before the purge date
 - On purge, the user row is hard-deleted and cascades to all related data (sessions, tokens, org memberships)
@@ -81,6 +88,7 @@ Before deploying VaultAuth to production:
 - [ ] Restrict `/metrics` to internal network only
 - [ ] Enable database SSL (`DATABASE_SSL=true`)
 - [ ] Set `CORS_ORIGINS` to your exact frontend domain
+- [ ] Set `WEBHOOK_SECRET_KEY` to a unique 32-byte hex key (`openssl rand -hex 32`)
 - [ ] Store secrets in a secrets manager (not plain env files)
 - [ ] Enable database backups
 - [ ] Monitor audit logs for suspicious activity
