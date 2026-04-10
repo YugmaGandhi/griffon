@@ -55,6 +55,7 @@ vaultauth/
       services/        # Business logic
       repositories/    # Database queries
       middleware/      # authenticate, authorize, rate-limit
+      jobs/            # Background jobs (purge, cleanup)
       db/              # Drizzle schema + migrations
       config/          # Environment validation
       utils/           # Shared utilities

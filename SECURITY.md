@@ -52,6 +52,18 @@ Tokens are signed with **RS256** (asymmetric RSA):
 - 15-minute lockout duration
 - Redis-backed rate limiting per IP
 
+### Account Disable / Blocklist
+- Disabled accounts are blocked at three layers: DB flag, all sessions revoked, Redis blocklist key set
+- Every authenticated request checks the blocklist (`blocklist:user:{id}`) — blocked users are rejected even with a valid JWT
+- Redis check is fail-open: if Redis is down, the request proceeds (access tokens expire in 15 minutes anyway)
+- Blocklist key TTL matches refresh token lifetime (30 days)
+
+### Account Deletion (GDPR)
+- Self-service deletion has a 30-day grace period — users can cancel before the purge date
+- On purge, the user row is hard-deleted and cascades to all related data (sessions, tokens, org memberships)
+- Audit log records deletion event with email before the row is removed
+- Admin force-delete is immediate and irreversible — requires `write:users` permission
+
 ### Email Security
 - Identical responses for unknown emails (enumeration prevention)
 - Email tokens stored as SHA-256 hashes

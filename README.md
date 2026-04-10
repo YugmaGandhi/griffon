@@ -26,6 +26,9 @@ VaultAuth is a production-grade authentication service you deploy yourself. It g
 - **JWT** with RS256 signing and automatic refresh token rotation
 - **RBAC** — roles and permissions embedded in tokens
 - **Multi-organization support** — users belong to multiple orgs, org-scoped roles and permissions in every token
+- **Session management** — list and revoke active sessions, self-service or admin-controlled
+- **User management** — admin API to create, update, disable, enable, and force-delete users
+- **Account deletion** — GDPR-compliant self-service deletion with 30-day grace period and admin force-delete
 - **Email flows** — verification and password reset
 - **Rate limiting** — Redis-backed, distributed
 - **Audit logs** — every auth event tracked
@@ -112,6 +115,11 @@ Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to 
 | POST | `/auth/reset-password` | Reset password |
 | POST | `/auth/set-active-org` | Switch active org, returns new token pair |
 | POST | `/auth/accept-invitation` | Accept org invitation |
+| GET | `/auth/sessions` | List active sessions for current user |
+| DELETE | `/auth/sessions/:id` | Revoke a specific session |
+| DELETE | `/auth/sessions` | Revoke all sessions (sign out everywhere) |
+| POST | `/auth/account/delete` | Request account deletion (30-day grace period) |
+| DELETE | `/auth/account/delete` | Cancel a pending deletion request |
 
 ### Organizations
 
@@ -138,7 +146,20 @@ Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to 
 | GET | `/auth/oauth/:provider` | Start OAuth flow |
 | GET | `/auth/oauth/:provider/callback` | OAuth callback |
 
-### Admin
+### Admin — User Management
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/users` | List users (paginated, filter by email/status) |
+| POST | `/api/admin/users` | Create a user (platform admin only) |
+| PATCH | `/api/admin/users/:id` | Update user email or verification status |
+| POST | `/api/admin/users/:id/disable` | Disable user — blocks login + invalidates sessions |
+| POST | `/api/admin/users/:id/enable` | Re-enable a disabled user |
+| GET | `/api/admin/users/:id/sessions` | View active sessions for a user |
+| DELETE | `/api/admin/users/:id/sessions` | Revoke all sessions for a user |
+| POST | `/api/admin/users/:id/delete` | Permanently delete a user (immediate, irreversible) |
+
+### Admin — RBAC & Audit
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
