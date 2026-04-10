@@ -12,10 +12,12 @@ import { buildErrorResponse } from './utils/response';
 import { rbacRoutes } from './routes/rbac.routes';
 import { adminRoutes } from './routes/admin.routes';
 import { orgRoutes } from './routes/org.routes';
+import { webhookRoutes } from './routes/webhook.routes';
 import { sessionRoutes } from './routes/session.routes';
 import { pool } from './db/connection';
 import { seedSystemData } from './db/seed';
 import { startDeletionPurgeJob } from './jobs/deletion-purge.job';
+import { startWebhookDeliveryJob } from './jobs/webhook-delivery.job';
 import {
   httpRequestDuration,
   httpRequestsTotal,
@@ -115,6 +117,7 @@ export async function buildApp() {
   // ── Background Jobs ────────────────────────────────────
   if (env.NODE_ENV !== 'test') {
     startDeletionPurgeJob();
+    startWebhookDeliveryJob();
   }
 
   // ── Routes ─────────────────────────────────────────────
@@ -169,6 +172,7 @@ export async function buildApp() {
   void app.register(rbacRoutes, { prefix: '/api' });
   void app.register(adminRoutes, { prefix: '/api/admin' });
   void app.register(orgRoutes, { prefix: '/api/orgs' });
+  void app.register(webhookRoutes, { prefix: '/api/orgs/:orgId/webhooks' });
 
   // ── Error Handlers ──────────────────────────────────────
   app.setNotFoundHandler((request, reply) => {

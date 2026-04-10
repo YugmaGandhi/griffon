@@ -12,6 +12,7 @@ import { emailService } from './email.service';
 import { OAuthProfile } from '../config/oauth-providers';
 import { rbacService } from './rbac.service';
 import { authEventsTotal } from '../utils/metrics';
+import { webhookService } from './webhook.service';
 
 const log = createLogger('AuthService');
 
@@ -269,6 +270,20 @@ export class AuthService {
 
     authEventsTotal.inc({ event: 'login_success' });
     log.info({ userId: user.id }, 'Login successful');
+
+    // Fanout webhook event — fire and forget, never blocks login
+    if (orgContext.orgId) {
+      void webhookService.fanout({
+        eventType: 'user.login',
+        orgId: orgContext.orgId,
+        payload: {
+          userId: user.id,
+          email: user.email,
+          orgId: orgContext.orgId,
+          ipAddress: ipAddress ?? null,
+        },
+      });
+    }
 
     // Access token expires in 15 minutes = 900 seconds
     const expiresIn = 900;
