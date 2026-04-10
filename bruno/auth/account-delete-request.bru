@@ -1,0 +1,14 @@
+meta {
+  name: Request Account Deletion
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{baseUrl}}/auth/account/delete
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

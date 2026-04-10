@@ -1,0 +1,14 @@
+meta {
+  name: Force Delete User (Admin)
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/api/admin/users/{{userId}}/delete
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
