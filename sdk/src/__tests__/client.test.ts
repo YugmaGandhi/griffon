@@ -1,12 +1,12 @@
-import { VaultAuthClient } from '../client'
-import { VaultAuthError } from '../errors'
+import { GriffonClient } from '../client'
+import { GriffonError } from '../errors'
 import { API_PATHS } from '../api-paths'
 
 // Mock fetch globally — no real HTTP calls ever made
 const mockFetch = jest.fn()
 
 const createClient = () =>
-  new VaultAuthClient({
+  new GriffonClient({
     baseUrl: 'http://mock-server.test',
     fetchImpl: mockFetch as unknown as typeof fetch,
   })
@@ -32,7 +32,7 @@ function mockError(code: string, message: string, status: number) {
   })
 }
 
-describe('VaultAuthClient', () => {
+describe('GriffonClient', () => {
   beforeEach(() => {
     mockFetch.mockClear()
   })
@@ -58,14 +58,14 @@ describe('VaultAuthClient', () => {
       expect(result.message).toContain('Account created')
     })
 
-    it('should throw VaultAuthError on duplicate email', async () => {
+    it('should throw GriffonError on duplicate email', async () => {
       const client = createClient()
 
       mockError('EMAIL_ALREADY_EXISTS', 'An account with this email already exists', 409)
 
       await expect(
         client.register('existing@example.com', 'password123')
-      ).rejects.toThrow(VaultAuthError)
+      ).rejects.toThrow(GriffonError)
     })
   })
 
@@ -95,13 +95,13 @@ describe('VaultAuthClient', () => {
       expect(client.getAccessToken()).toBe('mock.jwt.token')
     })
 
-    it('should throw VaultAuthError on invalid credentials', async () => {
+    it('should throw GriffonError on invalid credentials', async () => {
       const client = createClient()
       mockError('INVALID_CREDENTIALS', 'Invalid email or password', 401)
 
       await expect(
         client.login('test@example.com', 'wrongpassword')
-      ).rejects.toThrow(VaultAuthError)
+      ).rejects.toThrow(GriffonError)
 
       expect(client.isAuthenticated()).toBe(false)
     })
@@ -193,12 +193,12 @@ describe('VaultAuthClient', () => {
     it('should throw when not authenticated', async () => {
       const client = createClient()
 
-      await expect(client.getMe()).rejects.toThrow(VaultAuthError)
+      await expect(client.getMe()).rejects.toThrow(GriffonError)
       expect(mockFetch).not.toHaveBeenCalled()
     })
   })
 
-  describe('VaultAuthError', () => {
+  describe('GriffonError', () => {
     it('should have correct properties', async () => {
       const client = createClient()
       mockError('INVALID_CREDENTIALS', 'Invalid email or password', 401)
@@ -206,8 +206,8 @@ describe('VaultAuthClient', () => {
       try {
         await client.login('test@example.com', 'wrong')
       } catch (err) {
-        expect(err).toBeInstanceOf(VaultAuthError)
-        if (err instanceof VaultAuthError) {
+        expect(err).toBeInstanceOf(GriffonError)
+        if (err instanceof GriffonError) {
           expect(err.code).toBe('INVALID_CREDENTIALS')
           expect(err.statusCode).toBe(401)
           expect(err.isUnauthorized).toBe(true)

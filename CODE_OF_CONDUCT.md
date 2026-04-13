@@ -2,7 +2,7 @@
 
 ## Our Pledge
 
-We are committed to making participation in VaultAuth a harassment-free
+We are committed to making participation in Griffon a harassment-free
 experience for everyone, regardless of age, body size, disability, ethnicity,
 gender identity, level of experience, nationality, personal appearance, race,
 religion, or sexual identity and orientation.
@@ -25,7 +25,7 @@ religion, or sexual identity and orientation.
 
 Instances of unacceptable behaviour may be reported by contacting the maintainer
 via email or by opening a
-[GitHub Discussion](https://github.com/YugmaGandhi/vaultauth/discussions).
+[GitHub Discussion](https://github.com/YugmaGandhi/griffon/discussions).
 
 All complaints will be reviewed and investigated promptly and fairly.
 

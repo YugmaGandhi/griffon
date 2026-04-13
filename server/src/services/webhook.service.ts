@@ -64,7 +64,7 @@ function decryptSecret(stored: string): string {
 }
 
 // ── HMAC signature ────────────────────────────────────────
-// Header sent on every delivery: X-VaultAuth-Signature: sha256=<hex>
+// Header sent on every delivery: X-Griffon-Signature: sha256=<hex>
 // Customer verifies: compute HMAC-SHA256 over raw request body with their secret.
 function signPayload(rawSecret: string, body: string): string {
   return (
@@ -292,9 +292,9 @@ export class WebhookService {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-VaultAuth-Signature': signature,
-          'X-VaultAuth-Event': delivery.eventType,
-          'X-VaultAuth-Delivery': delivery.id,
+          'X-Griffon-Signature': signature,
+          'X-Griffon-Event': delivery.eventType,
+          'X-Griffon-Delivery': delivery.id,
         },
         body,
         signal: AbortSignal.timeout(10_000), // 10-second timeout
@@ -379,7 +379,7 @@ export class WebhookService {
       webhookEndpointId: params.endpointId,
       eventType: 'webhook.test',
       payload: {
-        message: 'This is a test event from VaultAuth',
+        message: 'This is a test event from Griffon',
         timestamp: new Date().toISOString(),
       },
     });

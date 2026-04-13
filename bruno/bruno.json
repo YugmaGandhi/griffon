@@ -1,6 +1,6 @@
 {
   "version": "1",
-  "name": "VaultAuth API",
+  "name": "Griffon API",
   "type": "collection",
   "ignore": [
     "node_modules",

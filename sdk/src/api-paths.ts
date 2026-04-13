@@ -1,4 +1,4 @@
-// Single source of truth for all VaultAuth API endpoints
+// Single source of truth for all Griffon API endpoints
 // If server routes change — update here only
 // SDK methods reference these constants, never hardcode paths
 

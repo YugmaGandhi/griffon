@@ -1,4 +1,4 @@
-export type VaultAuthConfig = {
+export type GriffonConfig = {
   baseUrl: string
   // Optional timeout in milliseconds — default 10000
   timeout?: number

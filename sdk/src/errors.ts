@@ -1,4 +1,4 @@
-export class VaultAuthError extends Error {
+export class GriffonError extends Error {
   constructor(
     public readonly code: string,
     message: string,
@@ -6,10 +6,10 @@ export class VaultAuthError extends Error {
     public readonly details?: { field: string; message: string }[]
   ) {
     super(message)
-    this.name = 'VaultAuthError'
+    this.name = 'GriffonError'
 
     // Fix prototype chain for instanceof checks
-    Object.setPrototypeOf(this, VaultAuthError.prototype)
+    Object.setPrototypeOf(this, GriffonError.prototype)
   }
 
   // Check if error is a specific code

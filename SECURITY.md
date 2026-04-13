@@ -13,7 +13,7 @@
 **Please do not report security vulnerabilities through public GitHub issues.**
 
 Instead, please report them by opening a
-[GitHub Security Advisory](https://github.com/YugmaGandhi/vaultauth/security/advisories/new).
+[GitHub Security Advisory](https://github.com/YugmaGandhi/griffon/security/advisories/new).
 
 Include:
 - Description of the vulnerability
@@ -27,7 +27,7 @@ You will receive a response within **48 hours**.
 
 ## Security Design
 
-VaultAuth is built with these security principles:
+Griffon is built with these security principles:
 
 ### Password Storage
 Passwords are hashed with **Argon2id** (OWASP recommended):
@@ -59,7 +59,7 @@ Tokens are signed with **RS256** (asymmetric RSA):
 - Blocklist key TTL matches refresh token lifetime (30 days)
 
 ### Webhook Signing
-- Every delivery includes `X-VaultAuth-Signature: sha256=<hmac-sha256-hex>`
+- Every delivery includes `X-Griffon-Signature: sha256=<hmac-sha256-hex>`
 - HMAC key is the endpoint's signing secret (32 cryptographically random bytes)
 - Secret shown once at registration — encrypted at rest with AES-256-GCM using `WEBHOOK_SECRET_KEY`
 - Only HTTPS URLs accepted — HTTP is rejected at registration
@@ -80,7 +80,7 @@ Tokens are signed with **RS256** (asymmetric RSA):
 
 ## Production Checklist
 
-Before deploying VaultAuth to production:
+Before deploying Griffon to production:
 
 - [ ] Deploy behind HTTPS reverse proxy (Nginx, Caddy, AWS ALB)
 - [ ] Set `NODE_ENV=production`

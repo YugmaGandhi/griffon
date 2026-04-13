@@ -56,7 +56,7 @@ const registry: Record<string, OAuthProviderConfig | null> = {
           profileHeaders: {
             // GitHub requires this header
             Accept: 'application/vnd.github+json',
-            'User-Agent': 'VaultAuth',
+            'User-Agent': 'Griffon',
           },
           getProfile: (data) => ({
             id: String(data.id),

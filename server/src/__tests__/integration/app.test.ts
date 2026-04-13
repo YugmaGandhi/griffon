@@ -87,12 +87,12 @@ describe('App — health, 404, error handler', () => {
       expect(res.statusCode).toBe(200);
       expect(res.headers['content-type']).toContain('text/plain');
       // Should contain default Node.js metrics
-      expect(res.body).toContain('vaultauth_nodejs');
+      expect(res.body).toContain('griffon_nodejs');
       // Should contain our custom HTTP metrics
-      expect(res.body).toContain('vaultauth_http_request_duration_seconds');
-      expect(res.body).toContain('vaultauth_http_requests_total');
+      expect(res.body).toContain('griffon_http_request_duration_seconds');
+      expect(res.body).toContain('griffon_http_requests_total');
       // Should contain auth event metrics
-      expect(res.body).toContain('vaultauth_auth_events_total');
+      expect(res.body).toContain('griffon_auth_events_total');
     });
   });
 

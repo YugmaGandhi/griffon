@@ -15,9 +15,9 @@ jobs:
       postgres:
         image: postgres:15-alpine
         env:
-          POSTGRES_USER: vaultauth
+          POSTGRES_USER: griffon
           POSTGRES_PASSWORD: password
-          POSTGRES_DB: vaultauth_test
+          POSTGRES_DB: griffon_test
         ports:
           - 5433:5432
         options: >-
@@ -63,7 +63,7 @@ jobs:
         working-directory: server
         timeout-minutes: 2
         env:
-          DATABASE_URL: postgresql://vaultauth:password@localhost:5433/vaultauth_test
+          DATABASE_URL: postgresql://griffon:password@localhost:5433/griffon_test
         run: npm run db:migrate
 
       - name: Type check
@@ -78,7 +78,7 @@ jobs:
         working-directory: server
         env:
           NODE_ENV: test
-          DATABASE_URL: postgresql://vaultauth:password@localhost:5433/vaultauth_test
+          DATABASE_URL: postgresql://griffon:password@localhost:5433/griffon_test
           REDIS_URL: redis://localhost:6380
           CORS_ORIGINS: http://localhost:3001
           PORT: 3000
@@ -88,7 +88,7 @@ jobs:
           JWT_PUBLIC_KEY: ${{ secrets.JWT_PUBLIC_KEY }}
           JWT_ACCESS_EXPIRY: 15m
           JWT_REFRESH_EXPIRY: 30d
-          JWT_ISSUER: vaultauth
+          JWT_ISSUER: griffon
           # These point to the Mailpit service container
           EMAIL_PROVIDER: smtp
           EMAIL_FROM: noreply@example.com

@@ -119,7 +119,7 @@ export class OAuthService {
       headers: {
         Authorization: `Bearer ${accessToken}`,
         Accept: 'application/vnd.github+json',
-        'User-Agent': 'VaultAuth',
+        'User-Agent': 'Griffon',
       },
     });
 

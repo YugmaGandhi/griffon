@@ -1,13 +1,13 @@
 <div align="center">
-  <h1>🔐 VaultAuth</h1>
+  <h1>🔐 Griffon</h1>
   <p><strong>Lightweight, self-hostable, open-source authentication service</strong></p>
   <p>The auth infrastructure you own — no vendor lock-in, no monthly fees.</p>
 
   <p>
-    <a href="https://github.com/YugmaGandhi/vaultauth/actions">
-      <img src="https://github.com/YugmaGandhi/vaultauth/workflows/CI/badge.svg" alt="CI" />
+    <a href="https://github.com/YugmaGandhi/griffon/actions">
+      <img src="https://github.com/YugmaGandhi/griffon/workflows/CI/badge.svg" alt="CI" />
     </a>
-    <a href="https://github.com/YugmaGandhi/vaultauth/blob/main/LICENSE">
+    <a href="https://github.com/YugmaGandhi/griffon/blob/main/LICENSE">
       <img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License" />
     </a>
     <img src="https://img.shields.io/badge/node-%3E%3D24.0.0-brightgreen" alt="Node 24+" />
@@ -17,9 +17,9 @@
 
 ---
 
-## What is VaultAuth?
+## What is Griffon?
 
-VaultAuth is a production-grade authentication service you deploy yourself. It gives you:
+Griffon is a production-grade authentication service you deploy yourself. It gives you:
 
 - **Email + password auth** with Argon2id hashing
 - **OAuth2** — Google, GitHub, Microsoft (extensible to any provider)
@@ -33,7 +33,7 @@ VaultAuth is a production-grade authentication service you deploy yourself. It g
 - **Email flows** — verification and password reset
 - **Rate limiting** — Redis-backed, distributed
 - **Audit logs** — every auth event tracked
-- **JavaScript SDK** — `@vaultauth/js` for easy integration
+- **JavaScript SDK** — `@griffon/js` for easy integration
 
 No vendor lock-in. No per-user pricing. Your data stays yours.
 
@@ -49,8 +49,8 @@ No vendor lock-in. No per-user pricing. Your data stays yours.
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/YugmaGandhi/vaultauth.git
-cd vaultauth
+git clone https://github.com/YugmaGandhi/griffon.git
+cd griffon
 npm install
 
 ```
@@ -96,7 +96,7 @@ npm run dev
 
 Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to confirm.
 
-> **Note:** On first boot, VaultAuth automatically seeds the default roles, permissions, and role-permission mappings. No manual seed step is required.
+> **Note:** On first boot, Griffon automatically seeds the default roles, permissions, and role-permission mappings. No manual seed step is required.
 
 ----------
 
@@ -186,7 +186,7 @@ Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to 
 
 ### Default Roles & Permissions
 
-VaultAuth ships with system roles and permissions that are seeded automatically on every boot. These are required for the application to function — do not delete them.
+Griffon ships with system roles and permissions that are seeded automatically on every boot. These are required for the application to function — do not delete them.
 
 **Roles:**
 
@@ -215,15 +215,15 @@ You can assign additional roles to users via the API. Role-permission mappings c
 ## JavaScript SDK
 
 ```bash
-npm install @vaultauth/js
+npm install @griffon/js
 
 ```
 
 ```typescript
-import { VaultAuthClient, VaultAuthError } from '@vaultauth/js'
+import { GriffonClient, GriffonError } from '@griffon/js'
 
-const client = new VaultAuthClient({
-  baseUrl: 'https://your-vaultauth-instance.com'
+const client = new GriffonClient({
+  baseUrl: 'https://your-griffon-instance.com'
 })
 
 // Register
@@ -300,7 +300,7 @@ Zero route changes needed.
 
 ## Security
 
-VaultAuth is built with security first:
+Griffon is built with security first:
 
 -   **Argon2id** password hashing (OWASP recommended, memory-hard)
 -   **RS256 JWT** — asymmetric signing, public key shareable
@@ -318,29 +318,29 @@ To report a vulnerability, see [SECURITY.md](./SECURITY.md).
 
 ## Monitoring
 
-VaultAuth exposes a Prometheus-compatible `/metrics` endpoint for observability.
+Griffon exposes a Prometheus-compatible `/metrics` endpoint for observability.
 
 **Available metrics:**
 
 | Metric | Type | Description |
 |--------|------|-------------|
-| `vaultauth_http_request_duration_seconds` | Histogram | Request duration by method, route, status |
-| `vaultauth_http_requests_total` | Counter | Total requests by method, route, status |
-| `vaultauth_auth_events_total` | Counter | Auth events (login_success, login_failed, register, logout, account_locked, etc.) |
-| `vaultauth_active_sessions` | Gauge | Active refresh token count |
-| `vaultauth_nodejs_*` | Various | Node.js process metrics (memory, CPU, event loop, GC) |
+| `griffon_http_request_duration_seconds` | Histogram | Request duration by method, route, status |
+| `griffon_http_requests_total` | Counter | Total requests by method, route, status |
+| `griffon_auth_events_total` | Counter | Auth events (login_success, login_failed, register, logout, account_locked, etc.) |
+| `griffon_active_sessions` | Gauge | Active refresh token count |
+| `griffon_nodejs_*` | Various | Node.js process metrics (memory, CPU, event loop, GC) |
 
 **Grafana dashboard example:**
 
 ```promql
 # Request rate
-rate(vaultauth_http_requests_total[5m])
+rate(griffon_http_requests_total[5m])
 
 # Login failure rate (brute force detection)
-rate(vaultauth_auth_events_total{event="login_failed"}[5m])
+rate(griffon_auth_events_total{event="login_failed"}[5m])
 
 # P95 latency
-histogram_quantile(0.95, rate(vaultauth_http_request_duration_seconds_bucket[5m]))
+histogram_quantile(0.95, rate(griffon_http_request_duration_seconds_bucket[5m]))
 ```
 
 > **Production warning:** The `/metrics` endpoint is unauthenticated by default. Protect it with a reverse proxy, IP allowlist, or network policy. Do not expose it to the public internet.
@@ -349,7 +349,7 @@ histogram_quantile(0.95, rate(vaultauth_http_request_duration_seconds_bucket[5m]
 
 ## Deployment
 
-VaultAuth runs anywhere Docker runs.
+Griffon runs anywhere Docker runs.
 
 ### Railway
 
@@ -372,8 +372,8 @@ fly deploy
 ### Docker
 
 ```bash
-docker build -t vaultauth ./server
-docker run -p 3000:3000 --env-file server/.env vaultauth
+docker build -t griffon ./server
+docker run -p 3000:3000 --env-file server/.env griffon
 
 ```
 

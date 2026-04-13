@@ -19,7 +19,7 @@ const log = createLogger('AuthService');
 // TODO: Move audit logging to an async event queue (e.g. Redis Streams)
 // Currently we await audit writes directly in the request path (~2-5ms).
 // Production IDPs (Auth0, Okta) use event pipelines so audit logging
-// never blocks the response. When VaultAuth needs to handle high throughput,
+// never blocks the response. When Griffon needs to handle high throughput,
 // publish audit events to a queue and consume them in a background worker.
 
 type RegisterParams = {
@@ -587,7 +587,7 @@ export class AuthService {
       throw new AuthError('INTERNAL_ERROR', 'OAuth login failed', 500);
     }
 
-    // Step 4 — Generate VaultAuth tokens
+    // Step 4 — Generate Griffon tokens
     const { roles, permissions } = await rbacService.getUserRolesAndPermissions(
       user.id
     );

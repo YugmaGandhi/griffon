@@ -18,7 +18,7 @@ export function orgInvitationEmailTemplate(params: OrgInvitationEmailParams): {
     orgName,
     invitedByEmail,
     role,
-    appName = 'VaultAuth',
+    appName = 'Griffon',
   } = params;
 
   return {
@@ -63,7 +63,7 @@ export function verificationEmailTemplate(params: VerificationEmailParams): {
   html: string;
   text: string;
 } {
-  const { email, verificationUrl, appName = 'VaultAuth' } = params;
+  const { email, verificationUrl, appName = 'Griffon' } = params;
 
   return {
     subject: `Verify your email — ${appName}`,
@@ -95,7 +95,7 @@ export function passwordResetEmailTemplate(params: PasswordResetEmailParams): {
   html: string;
   text: string;
 } {
-  const { email, resetUrl, appName = 'VaultAuth' } = params;
+  const { email, resetUrl, appName = 'Griffon' } = params;
 
   return {
     subject: `Reset your password — ${appName}`,

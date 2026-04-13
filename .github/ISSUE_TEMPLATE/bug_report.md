@@ -19,7 +19,7 @@ What should have happened.
 What actually happened.
 
 ## Environment
-- VaultAuth version:
+- Griffon version:
 - Node.js version:
 - OS:
 

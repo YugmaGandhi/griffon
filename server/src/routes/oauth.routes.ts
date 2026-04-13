@@ -134,7 +134,7 @@ export function oauthRoutes(
         userAgent: request.headers['user-agent'],
       });
 
-      // Redirect with VaultAuth tokens
+      // Redirect with Griffon tokens
       const redirectParams = new URLSearchParams({
         accessToken: result.accessToken,
         refreshToken: result.refreshToken,

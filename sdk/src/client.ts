@@ -1,14 +1,14 @@
-import { VaultAuthConfig, LoginResult, RegisterResult, AuthUser, ApiResponse, ApiErrorResponse, TokenPair } from './types'
-import { VaultAuthError } from './errors'
+import { GriffonConfig, LoginResult, RegisterResult, AuthUser, ApiResponse, ApiErrorResponse, TokenPair } from './types'
+import { GriffonError } from './errors'
 import { TokenStore } from './token-store'
 import { API_PATHS } from './api-paths'
 
-export class VaultAuthClient {
-  private config: Required<VaultAuthConfig>
+export class GriffonClient {
+  private config: Required<GriffonConfig>
   private tokenStore: TokenStore
   private refreshPromise: Promise<void> | null = null
 
-  constructor(config: VaultAuthConfig) {
+  constructor(config: GriffonConfig) {
     this.config = {
       timeout: 10000,
       fetchImpl: fetch,
@@ -66,7 +66,7 @@ export class VaultAuthClient {
   async refreshTokens(): Promise<void> {
     const refreshToken = this.tokenStore.getRefreshToken()
     if (!refreshToken) {
-      throw new VaultAuthError(
+      throw new GriffonError(
         'NOT_AUTHENTICATED',
         'No refresh token available',
         401
@@ -142,7 +142,7 @@ export class VaultAuthClient {
 
     const accessToken = this.tokenStore.getAccessToken()
     if (!accessToken) {
-      throw new VaultAuthError(
+      throw new GriffonError(
         'NOT_AUTHENTICATED',
         'Not authenticated',
         401
@@ -199,7 +199,7 @@ export class VaultAuthClient {
 
       if (!response.ok || !json.success) {
         const error = json as ApiErrorResponse
-        throw new VaultAuthError(
+        throw new GriffonError(
           error.error.code,
           error.error.message,
           response.status,
@@ -209,17 +209,17 @@ export class VaultAuthClient {
 
       return (json as ApiResponse<T>).data
     } catch (err) {
-      if (err instanceof VaultAuthError) throw err
+      if (err instanceof GriffonError) throw err
 
       if (err instanceof Error && err.name === 'AbortError') {
-        throw new VaultAuthError(
+        throw new GriffonError(
           'REQUEST_TIMEOUT',
           'Request timed out',
           408
         )
       }
 
-      throw new VaultAuthError(
+      throw new GriffonError(
         'NETWORK_ERROR',
         'Network request failed',
         0

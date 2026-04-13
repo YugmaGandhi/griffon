@@ -31,12 +31,12 @@ export const envSchema = z.object({
   JWT_PUBLIC_KEY: z.string().min(1, 'JWT_PUBLIC_KEY is required'),
   JWT_ACCESS_EXPIRY: z.string().default('15m'),
   JWT_REFRESH_EXPIRY: z.string().default('30d'),
-  JWT_ISSUER: z.string().default('vaultauth'),
+  JWT_ISSUER: z.string().default('griffon'),
 
   // Email
   EMAIL_PROVIDER: z.enum(['smtp', 'resend']).default('smtp'),
   EMAIL_FROM: z.string().min(1, 'EMAIL_FROM is required'),
-  EMAIL_FROM_NAME: z.string().default('VaultAuth'),
+  EMAIL_FROM_NAME: z.string().default('Griffon'),
   SMTP_HOST: z.string().optional(),
   SMTP_PORT: z.coerce.number().default(587),
   SMTP_USER: z.string().optional(),

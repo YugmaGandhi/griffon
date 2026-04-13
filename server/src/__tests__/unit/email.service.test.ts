@@ -29,8 +29,8 @@ jest.mock('../../config/env', () => ({
     SMTP_PASS: undefined,
     RESEND_API_KEY: undefined,
     APP_BASE_URL: 'http://localhost:3000',
-    EMAIL_FROM: 'noreply@vaultauth.dev',
-    EMAIL_FROM_NAME: 'VaultAuth',
+    EMAIL_FROM: 'noreply@griffon.dev',
+    EMAIL_FROM_NAME: 'Griffon',
   },
 }));
 
@@ -81,7 +81,7 @@ describe('EmailService', () => {
       expect(sendMailHolder.fn).toHaveBeenCalledTimes(1);
       expect(sendMailHolder.fn).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: '"VaultAuth" <noreply@vaultauth.dev>',
+          from: '"Griffon" <noreply@griffon.dev>',
           to: 'user@example.com',
           subject: 'Verify your email',
         })
@@ -127,7 +127,7 @@ describe('EmailService', () => {
       expect(sendMailHolder.fn).toHaveBeenCalledTimes(1);
       expect(sendMailHolder.fn).toHaveBeenCalledWith(
         expect.objectContaining({
-          from: '"VaultAuth" <noreply@vaultauth.dev>',
+          from: '"Griffon" <noreply@griffon.dev>',
           to: 'user@example.com',
           subject: 'Reset your password',
         })
