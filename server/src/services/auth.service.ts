@@ -165,16 +165,7 @@ export class AuthService {
       await userRepository.resetFailedAttempts(user.id);
     }
 
-    // Step 3 — Check if account is disabled by admin
-    if (user.isDisabled) {
-      log.warn({ userId: user.id }, 'Login failed — account disabled');
-      throw new ForbiddenError(
-        'ACCOUNT_DISABLED',
-        'Your account has been disabled. Please contact support.'
-      );
-    }
-
-    // Step 4 — Check email verified
+    // Step 3 — Check email verified
     if (!user.isVerified) {
       log.warn({ userId: user.id }, 'Login failed — email not verified');
       throw new ForbiddenError(
@@ -183,7 +174,7 @@ export class AuthService {
       );
     }
 
-    // Step 5 — Verify password
+    // Step 4 — Verify password
     const passwordValid = await passwordService.verify(
       password,
       user.passwordHash ?? ''
@@ -226,6 +217,18 @@ export class AuthService {
       authEventsTotal.inc({ event: 'login_failed' });
 
       throw new AuthError('INVALID_CREDENTIALS', 'Invalid email or password');
+    }
+
+    // Step 5 — Check if account is disabled by admin.
+    // Deferred until after password verification so attackers without the
+    // correct password get the same INVALID_CREDENTIALS response whether
+    // the account is disabled or not — denies a user-enumeration oracle.
+    if (user.isDisabled) {
+      log.warn({ userId: user.id }, 'Login failed — account disabled');
+      throw new ForbiddenError(
+        'ACCOUNT_DISABLED',
+        'Your account has been disabled. Please contact support.'
+      );
     }
 
     // Step 6 — Generate tokens
@@ -587,6 +590,20 @@ export class AuthService {
       throw new AuthError('INTERNAL_ERROR', 'OAuth login failed', 500);
     }
 
+    // Block disabled accounts from completing OAuth login.
+    // Mirrors the guard in login() — admins disable users from a single
+    // surface, so OAuth must respect it too.
+    if (user.isDisabled) {
+      log.warn(
+        { userId: user.id, provider: providerName },
+        'OAuth login failed — account disabled'
+      );
+      throw new ForbiddenError(
+        'ACCOUNT_DISABLED',
+        'Your account has been disabled. Please contact support.'
+      );
+    }
+
     // Step 4 — Generate Griffon tokens
     const { roles, permissions } = await rbacService.getUserRolesAndPermissions(
       user.id
@@ -640,6 +657,9 @@ export class AuthService {
       refreshToken: rawRefreshToken,
       expiresIn: 900,
       user: {
+        // Note: `user` here is already SafeUser — userRepository.findByOAuthId
+        // and createOAuthUser both return the sanitized type, so spreading
+        // is safe (no passwordHash present).
         ...user,
         roles: tokenUser.roles,
         permissions: tokenUser.permissions,
