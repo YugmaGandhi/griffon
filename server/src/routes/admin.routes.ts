@@ -19,14 +19,14 @@ const log = createLogger('AdminRoutes');
 
 // ── Schemas ───────────────────────────────────────────────
 const auditLogsQuerySchema = z.object({
-  page: z.coerce.number().default(1),
-  limit: z.coerce.number().max(100).default(20),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
   userId: z.string().uuid().optional(),
 });
 
 const listUsersQuerySchema = z.object({
-  page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(20),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
   email: z.string().optional(),
   isDisabled: z
     .enum(['true', 'false'])
@@ -46,15 +46,19 @@ const createUserBodySchema = z.object({
     .max(128, 'Password too long'),
 });
 
-const updateUserBodySchema = z.object({
-  email: z
-    .string()
-    .email('Invalid email format')
-    .toLowerCase()
-    .trim()
-    .optional(),
-  isVerified: z.boolean().optional(),
-});
+const updateUserBodySchema = z
+  .object({
+    email: z
+      .string()
+      .email('Invalid email format')
+      .toLowerCase()
+      .trim()
+      .optional(),
+    isVerified: z.boolean().optional(),
+  })
+  .refine((body) => Object.keys(body).length > 0, {
+    message: 'At least one field must be provided',
+  });
 
 const userIdParamSchema = z.object({
   id: z.string().uuid('Invalid user ID'),
