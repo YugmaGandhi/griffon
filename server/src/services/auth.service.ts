@@ -276,16 +276,18 @@ export class AuthService {
 
     // Fanout webhook event — fire and forget, never blocks login
     if (orgContext.orgId) {
-      void webhookService.fanout({
-        eventType: 'user.login',
-        orgId: orgContext.orgId,
-        payload: {
-          userId: user.id,
-          email: user.email,
+      void webhookService
+        .fanout({
+          eventType: 'user.login',
           orgId: orgContext.orgId,
-          ipAddress: ipAddress ?? null,
-        },
-      });
+          payload: {
+            userId: user.id,
+            email: user.email,
+            orgId: orgContext.orgId,
+            ipAddress: ipAddress ?? null,
+          },
+        })
+        .catch((err: unknown) => log.error({ err }, 'Webhook fanout failed'));
     }
 
     // Access token expires in 15 minutes = 900 seconds
