@@ -351,6 +351,15 @@ describe('MfaService', () => {
       ).rejects.toThrow(NotFoundError);
     });
 
+    it('should throw NOT_FOUND when setup was started but never verified (isEnabled=false)', async () => {
+      // A setting row with isEnabled=false does not block login — nothing to disable
+      mockMfaRepo.findByUserId.mockResolvedValue(disabledSetting);
+
+      await expect(
+        service.adminDisableMfa({ targetUserId: userId, adminId })
+      ).rejects.toThrow(NotFoundError);
+    });
+
     it('should delete the setting without requiring a TOTP code', async () => {
       mockMfaRepo.findByUserId.mockResolvedValue(enabledSetting);
       mockMfaRepo.deleteSetting.mockResolvedValue();

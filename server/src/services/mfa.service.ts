@@ -41,6 +41,11 @@ function encryptSecret(rawSecret: string): string {
 
 function decryptSecret(stored: string): string {
   const [ivHex, authTagHex, ciphertextHex] = stored.split(':');
+  if (!ivHex || !authTagHex || !ciphertextHex) {
+    throw new Error(
+      `Malformed encrypted MFA secret — expected "iv:authTag:ciphertext", got ${JSON.stringify(stored)}`
+    );
+  }
   const key = Buffer.from(env.MFA_ENCRYPTION_KEY, 'hex');
   const decipher = crypto.createDecipheriv(
     'aes-256-gcm',
@@ -380,7 +385,7 @@ export class MfaService {
     const { targetUserId, adminId, ipAddress } = params;
 
     const setting = await mfaRepository.findByUserId(targetUserId);
-    if (!setting) {
+    if (!setting?.isEnabled) {
       throw new NotFoundError(
         'MFA_NOT_ENABLED',
         'MFA is not enabled for this user.'

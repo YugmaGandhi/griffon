@@ -357,9 +357,12 @@ export class AuthService {
   }): Promise<LoginSuccess> {
     const { mfaToken, code, ipAddress, userAgent } = params;
 
-    // Step 1 — Look up the challenge in Redis
+    // Step 1 — Atomically retrieve and delete the challenge from Redis.
+    // getdel ensures only one concurrent caller gets the value — a plain
+    // get + del leaves a window where two requests can both read the challenge
+    // before either deletes it, breaking the single-use guarantee.
     const mfaTokenHash = tokenService.hashRefreshToken(mfaToken);
-    const challengeRaw = await redis.get(`mfa:challenge:${mfaTokenHash}`);
+    const challengeRaw = await redis.getdel(`mfa:challenge:${mfaTokenHash}`);
 
     if (!challengeRaw) {
       throw new AuthError(
@@ -369,13 +372,12 @@ export class AuthService {
       );
     }
 
-    // Step 2 — Parse challenge and delete it immediately (single-use)
+    // Step 2 — Parse the challenge (already deleted from Redis above)
     const challenge = JSON.parse(challengeRaw) as {
       userId: string;
       ipAddress?: string;
       userAgent?: string;
     };
-    await redis.del(`mfa:challenge:${mfaTokenHash}`);
 
     // Step 3 — Verify the TOTP or recovery code
     await mfaService.verifyLoginCode({

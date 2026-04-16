@@ -12,7 +12,7 @@ jest.mock('../../services/email.service');
 jest.mock('../../services/rbac.service');
 jest.mock('../../services/mfa.service');
 jest.mock('../../db/redis', () => ({
-  redis: { set: jest.fn(), get: jest.fn(), del: jest.fn() },
+  redis: { set: jest.fn(), get: jest.fn(), getdel: jest.fn(), del: jest.fn() },
 }));
 jest.mock('../../utils/metrics', () => ({
   authEventsTotal: { inc: jest.fn() },

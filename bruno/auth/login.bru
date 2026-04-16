@@ -22,6 +22,10 @@ script:post-response {
     if (res.body.data.mfaRequired) {
       // MFA challenge — save the short-lived token for the verify step
       bru.setVar("mfaToken", res.body.data.mfaToken);
+      // Clear stale tokens so subsequent requests can't accidentally use them
+      bru.setVar("accessToken", "");
+      bru.setVar("refreshToken", "");
+      bru.setVar("sessionId", "");
     } else {
       // No MFA — save real tokens directly
       bru.setVar("accessToken", res.body.data.accessToken);

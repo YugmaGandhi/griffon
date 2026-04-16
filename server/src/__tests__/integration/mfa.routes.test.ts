@@ -335,18 +335,22 @@ describe('MFA Routes', () => {
       });
       const { mfaToken } = loginRes.json<{ data: { mfaToken: string } }>().data;
 
+      // Capture once so both requests use the same code — avoids flakiness
+      // if the 30-second TOTP window rolls over between the two inject calls.
+      const code = generateTotpCode(secret);
+
       // Use it once successfully
       await app.inject({
         method: 'POST',
         url: '/auth/mfa/verify',
-        payload: { mfaToken, code: generateTotpCode(secret) },
+        payload: { mfaToken, code },
       });
 
-      // Second use must fail
+      // Second use must fail — mfaToken is single-use (consumed above)
       const reuse = await app.inject({
         method: 'POST',
         url: '/auth/mfa/verify',
-        payload: { mfaToken, code: generateTotpCode(secret) },
+        payload: { mfaToken, code },
       });
 
       expect(reuse.statusCode).toBe(401);

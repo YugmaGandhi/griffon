@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import { db } from '../db/connection';
 import { mfaSettings, mfaRecoveryCodes, orgMfaPolicies } from '../db/schema';
 import { MfaSetting, MfaRecoveryCode, OrgMfaPolicy } from '../utils/types';
@@ -115,12 +115,12 @@ export class MfaRepository {
   // Count remaining recovery codes for a user.
   // Returned in the status response so users know when to regenerate.
   async countRecoveryCodes(userId: string): Promise<number> {
-    const rows = await db
-      .select({ id: mfaRecoveryCodes.id })
+    const [result] = await db
+      .select({ count: sql<number>`count(*)::int` })
       .from(mfaRecoveryCodes)
       .where(eq(mfaRecoveryCodes.userId, userId));
 
-    return rows.length;
+    return result?.count ?? 0;
   }
 
   // ── Org MFA Policies ──────────────────────────────────

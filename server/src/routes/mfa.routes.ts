@@ -16,7 +16,9 @@ const log = createLogger('MfaRoutes');
 
 // ── Schemas ───────────────────────────────────────────────
 
-const verifySetupSchema = z.object({
+// Shared schema for any request that requires a 6-digit TOTP code.
+// Used by verify-setup, disable MFA, and regenerate recovery codes.
+const totpCodeSchema = z.object({
   code: z
     .string()
     .length(6, 'TOTP code must be exactly 6 digits')
@@ -26,20 +28,6 @@ const verifySetupSchema = z.object({
 const verifyLoginSchema = z.object({
   mfaToken: z.string().min(1, 'MFA token is required'),
   code: z.string().min(1, 'Code is required'),
-});
-
-const disableMfaSchema = z.object({
-  code: z
-    .string()
-    .length(6, 'TOTP code must be exactly 6 digits')
-    .regex(/^\d{6}$/, 'TOTP code must be numeric'),
-});
-
-const regenerateCodesSchema = z.object({
-  code: z
-    .string()
-    .length(6, 'TOTP code must be exactly 6 digits')
-    .regex(/^\d{6}$/, 'TOTP code must be numeric'),
 });
 
 // ── Routes ────────────────────────────────────────────────
@@ -82,7 +70,7 @@ const mfaRoutes: FastifyPluginCallback = (
     '/mfa/verify-setup',
     { preHandler: [authenticate] },
     async (request, reply) => {
-      const parsed = verifySetupSchema.safeParse(request.body);
+      const parsed = totpCodeSchema.safeParse(request.body);
       if (!parsed.success) {
         return sendValidationError(
           reply,
@@ -167,6 +155,10 @@ const mfaRoutes: FastifyPluginCallback = (
         if (isAppError(err)) {
           return sendError(reply, err.statusCode, err.code, err.message);
         }
+        log.error(
+          { err, reqId: request.id },
+          'Unexpected error fetching MFA status'
+        );
         throw err;
       }
     }
@@ -176,7 +168,7 @@ const mfaRoutes: FastifyPluginCallback = (
   // Requires a valid TOTP code to prevent a stolen session from silently
   // removing MFA protection. Deletes the setting and all recovery codes.
   app.delete('/mfa', { preHandler: [authenticate] }, async (request, reply) => {
-    const parsed = disableMfaSchema.safeParse(request.body);
+    const parsed = totpCodeSchema.safeParse(request.body);
     if (!parsed.success) {
       return sendValidationError(
         reply,
@@ -212,7 +204,7 @@ const mfaRoutes: FastifyPluginCallback = (
     '/mfa/recovery-codes',
     { preHandler: [authenticate] },
     async (request, reply) => {
-      const parsed = regenerateCodesSchema.safeParse(request.body);
+      const parsed = totpCodeSchema.safeParse(request.body);
       if (!parsed.success) {
         return sendValidationError(
           reply,

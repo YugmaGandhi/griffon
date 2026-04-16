@@ -466,11 +466,7 @@ const orgRoutes: FastifyPluginCallback = (
   app.get(
     '/:orgId/mfa-policy',
     {
-      preHandler: [
-        authenticate,
-        resolveOrgFromParam(),
-        authorizeOrgRole('owner', 'admin'),
-      ],
+      preHandler: [resolveOrgFromParam(), authorizeOrgRole('owner', 'admin')],
     },
     async (request, reply) => {
       const parsed = orgIdParamSchema.safeParse(request.params);
@@ -504,11 +500,7 @@ const orgRoutes: FastifyPluginCallback = (
   app.put(
     '/:orgId/mfa-policy',
     {
-      preHandler: [
-        authenticate,
-        resolveOrgFromParam(),
-        authorizeOrgRole('owner'),
-      ],
+      preHandler: [resolveOrgFromParam(), authorizeOrgRole('owner')],
     },
     async (request, reply) => {
       const paramsParsed = orgIdParamSchema.safeParse(request.params);
