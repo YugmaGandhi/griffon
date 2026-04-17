@@ -372,12 +372,19 @@ export class AuthService {
       );
     }
 
-    // Step 2 — Parse the challenge (already deleted from Redis above)
-    const challenge = JSON.parse(challengeRaw) as {
-      userId: string;
-      ipAddress?: string;
-      userAgent?: string;
-    };
+    // Step 2 — Parse the challenge (already deleted from Redis above).
+    // Treat malformed JSON the same as an expired token — the challenge is
+    // already consumed so there is no safe way to retry.
+    let challenge: { userId: string; ipAddress?: string; userAgent?: string };
+    try {
+      challenge = JSON.parse(challengeRaw) as typeof challenge;
+    } catch {
+      throw new AuthError(
+        'MFA_TOKEN_EXPIRED',
+        'MFA session expired or invalid. Please log in again.',
+        401
+      );
+    }
 
     // Step 3 — Verify the TOTP or recovery code
     await mfaService.verifyLoginCode({
@@ -386,10 +393,25 @@ export class AuthService {
       ipAddress,
     });
 
-    // Step 4 — Load user for token generation
+    // Step 4 — Load user and revalidate account state.
+    // The MFA challenge has up to 5 minutes TTL — an admin could disable or
+    // lock the account between challenge issuance and this verification.
     const user = await userRepository.findById(challenge.userId);
     if (!user) {
       throw new AuthError('TOKEN_INVALID', 'Invalid authentication token');
+    }
+    if (user.isDisabled) {
+      throw new ForbiddenError(
+        'ACCOUNT_DISABLED',
+        'Your account has been disabled. Please contact support.'
+      );
+    }
+    if (user.isLocked && user.lockedUntil && user.lockedUntil > new Date()) {
+      throw new AuthError(
+        'ACCOUNT_LOCKED',
+        'Account temporarily locked due to too many failed attempts',
+        423
+      );
     }
 
     // Step 5 — Generate real token pair (same as login steps 7-9)

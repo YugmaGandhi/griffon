@@ -113,7 +113,8 @@ export const envSchema = z
     // Reject matching keys — a shared key means compromising one compromises both.
     if (
       env.NODE_ENV === 'production' &&
-      env.MFA_ENCRYPTION_KEY === env.WEBHOOK_SECRET_KEY
+      env.MFA_ENCRYPTION_KEY.toLowerCase() ===
+        env.WEBHOOK_SECRET_KEY.toLowerCase()
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
