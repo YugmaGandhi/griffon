@@ -58,6 +58,14 @@ Tokens are signed with **RS256** (asymmetric RSA):
 - Redis check is fail-open: if Redis is down, the request proceeds (access tokens expire in 15 minutes anyway)
 - Blocklist key TTL matches refresh token lifetime (30 days)
 
+### Multi-Factor Authentication (TOTP)
+- TOTP secrets generated as 20-byte random values, encoded as base32
+- Secrets encrypted at rest with **AES-256-GCM** using `MFA_ENCRYPTION_KEY` — stored as `iv:authTag:ciphertext` (all hex)
+- MFA challenge token: 64 random bytes, stored in Redis as SHA-256 hash with 5-minute TTL, consumed atomically via `GETDEL`
+- Recovery codes: 8 per user, 80-bit entropy (`XXXXX-XXXXX` format), SHA-256 hashed, single-use enforced by deletion
+- TOTP window: ±1 step (30s each) to tolerate clock drift — valid for up to 90 seconds
+- Org enforcement: owners can require MFA for all members, enforced at middleware level; super-admins bypass
+
 ### Webhook Signing
 - Every delivery includes `X-Griffon-Signature: sha256=<hmac-sha256-hex>`
 - HMAC key is the endpoint's signing secret (32 cryptographically random bytes)
@@ -89,6 +97,7 @@ Before deploying Griffon to production:
 - [ ] Enable database SSL (`DATABASE_SSL=true`)
 - [ ] Set `CORS_ORIGINS` to your exact frontend domain
 - [ ] Set `WEBHOOK_SECRET_KEY` to a unique 32-byte hex key (`openssl rand -hex 32`)
+- [ ] Set `MFA_ENCRYPTION_KEY` to a unique 32-byte hex key (`openssl rand -hex 32`) — must differ from `WEBHOOK_SECRET_KEY`
 - [ ] Store secrets in a secrets manager (not plain env files)
 - [ ] Enable database backups
 - [ ] Monitor audit logs for suspicious activity

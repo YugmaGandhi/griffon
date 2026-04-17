@@ -23,6 +23,7 @@ Griffon is a production-grade authentication service you deploy yourself. It giv
 
 - **Email + password auth** with Argon2id hashing
 - **OAuth2** — Google, GitHub, Microsoft (extensible to any provider)
+- **MFA** — TOTP-based two-factor authentication with QR code enrollment, recovery codes, and org-level enforcement
 - **JWT** with RS256 signing and automatic refresh token rotation
 - **RBAC** — roles and permissions embedded in tokens
 - **Multi-organization support** — users belong to multiple orgs, org-scoped roles and permissions in every token
@@ -107,7 +108,7 @@ Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | POST | `/auth/register` | Create account |
-| POST | `/auth/login` | Login, returns JWT + refresh token + org list |
+| POST | `/auth/login` | Login — returns JWT + refresh token, or MFA challenge if MFA is enrolled |
 | POST | `/auth/logout` | Revoke refresh token |
 | POST | `/auth/refresh` | Rotate refresh token |
 | GET | `/auth/me` | Get current user |
@@ -121,6 +122,20 @@ Server runs at `http://localhost:3000`. Visit `http://localhost:3000/health` to 
 | DELETE | `/auth/sessions` | Revoke all sessions (sign out everywhere) |
 | POST | `/auth/account/delete` | Request account deletion (30-day grace period) |
 | DELETE | `/auth/account/delete` | Cancel a pending deletion request |
+
+### MFA
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/mfa/setup` | Start enrollment — returns TOTP secret, QR code, and recovery codes |
+| POST | `/auth/mfa/verify-setup` | Confirm enrollment with first TOTP code |
+| POST | `/auth/mfa/verify` | Complete two-step login with TOTP or recovery code |
+| GET | `/auth/mfa/status` | Get MFA enrollment state and remaining recovery codes |
+| DELETE | `/auth/mfa` | Disable MFA (requires valid TOTP code) |
+| POST | `/auth/mfa/recovery-codes` | Regenerate recovery codes (requires valid TOTP code) |
+| GET | `/api/orgs/:orgId/mfa-policy` | Get org MFA enforcement policy |
+| PUT | `/api/orgs/:orgId/mfa-policy` | Enable or disable MFA enforcement for an org (owner only) |
+| DELETE | `/api/admin/users/:id/mfa` | Admin force-disable MFA for a user |
 
 ### Organizations
 
@@ -304,6 +319,7 @@ Griffon is built with security first:
 
 -   **Argon2id** password hashing (OWASP recommended, memory-hard)
 -   **RS256 JWT** — asymmetric signing, public key shareable
+-   **TOTP MFA** — AES-256-GCM encrypted secrets at rest, single-use recovery codes, short-lived challenge tokens
 -   **Single-use refresh tokens** — rotation on every use, reuse detection
 -   **SHA-256** token storage — never raw tokens in database
 -   **Brute force protection** — account lockout after 5 failures

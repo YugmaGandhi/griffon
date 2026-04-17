@@ -31,6 +31,10 @@ cp server/.env.example server/.env
 cd server && npm run gen:keys
 # Paste generated keys into server/.env
 
+# Generate MFA and webhook encryption keys
+openssl rand -hex 32  # → MFA_ENCRYPTION_KEY
+openssl rand -hex 32  # → WEBHOOK_SECRET_KEY (must differ from MFA key)
+
 # 5. Run migrations
 cd server && npm run db:migrate
 
