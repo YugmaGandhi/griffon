@@ -59,6 +59,10 @@ export const auditEventTypeEnum = pgEnum('audit_event_type', [
   'mfa_recovery_regenerated',
   'org_mfa_enforced',
   'org_mfa_unenforced',
+  // Phase 2 — API Keys
+  'api_key_created',
+  'api_key_revoked',
+  'api_key_used',
 ]);
 
 export const deletionStatusEnum = pgEnum('deletion_status', [
@@ -452,6 +456,38 @@ export const orgMfaPolicies = pgTable('org_mfa_policies', {
     .defaultNow(),
 });
 
+// ── API Keys ────────────────────────────────────────────
+// One row per key. keyHash is SHA-256 of the full key — plaintext returned once
+// at creation, never stored. prefix stores the first 10 chars for log identification.
+// permissions: frozen string[] of granted scopes (not live user permissions).
+// revokedAt: soft-revoke — row stays for audit history.
+export const apiKeys = pgTable(
+  'api_keys',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    orgId: uuid('org_id').references(() => organizations.id, {
+      onDelete: 'cascade',
+    }),
+    name: varchar('name', { length: 255 }).notNull(),
+    prefix: varchar('prefix', { length: 20 }).notNull(),
+    keyHash: varchar('key_hash', { length: 255 }).notNull().unique(),
+    permissions: jsonb('permissions').notNull().default([]),
+    expiresAt: timestamp('expires_at', { withTimezone: true }),
+    lastUsedAt: timestamp('last_used_at', { withTimezone: true }),
+    revokedAt: timestamp('revoked_at', { withTimezone: true }),
+    createdAt: timestamp('created_at', { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (t) => [
+    index('api_keys_user_id_idx').on(t.userId),
+    index('api_keys_org_id_idx').on(t.orgId),
+  ]
+);
+
 // ── Relations (for Drizzle joins) ───────────────────────
 export const organizationsRelations = relations(
   organizations,
@@ -609,6 +645,17 @@ export const mfaRecoveryCodesRelations = relations(
 export const orgMfaPoliciesRelations = relations(orgMfaPolicies, ({ one }) => ({
   organization: one(organizations, {
     fields: [orgMfaPolicies.orgId],
+    references: [organizations.id],
+  }),
+}));
+
+export const apiKeysRelations = relations(apiKeys, ({ one }) => ({
+  user: one(users, {
+    fields: [apiKeys.userId],
+    references: [users.id],
+  }),
+  organization: one(organizations, {
+    fields: [apiKeys.orgId],
     references: [organizations.id],
   }),
 }));

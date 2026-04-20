@@ -90,6 +90,9 @@ export const envSchema = z
       .default(
         '0000000000000000000000000000000000000000000000000000000000000000'
       ),
+
+    // API Keys — maximum number of active (non-revoked) API keys per user.
+    MAX_API_KEYS_PER_USER: z.coerce.number().int().positive().default(10),
   })
   .superRefine((env, ctx) => {
     // Block the all-zero placeholder in production — the dev default
