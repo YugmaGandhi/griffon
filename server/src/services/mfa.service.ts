@@ -5,7 +5,12 @@ import { env } from '../config/env';
 import { mfaRepository } from '../repositories/mfa.repository';
 import { auditRepository } from '../repositories/audit.repository';
 import { AuthError, NotFoundError } from '../utils/errors';
-import { SafeMfaSetting, OrgMfaPolicy, toSafeMfaSetting } from '../utils/types';
+import {
+  SafeMfaSetting,
+  OrgMfaPolicy,
+  MfaSetting,
+  toSafeMfaSetting,
+} from '../utils/types';
 import { createLogger } from '../utils/logger';
 
 const log = createLogger('MfaService');
@@ -286,22 +291,7 @@ export class MfaService {
   }): Promise<void> {
     const { userId, code, ipAddress } = params;
 
-    const setting = await mfaRepository.findByUserId(userId);
-    if (!setting?.isEnabled) {
-      throw new NotFoundError(
-        'MFA_NOT_ENABLED',
-        'MFA is not enabled on this account.'
-      );
-    }
-
-    const base32Secret = decryptSecret(setting.encryptedSecret);
-    if (!verifyTotpCode(base32Secret, code)) {
-      throw new AuthError(
-        'MFA_INVALID_CODE',
-        'Invalid code. MFA was not disabled.',
-        400
-      );
-    }
+    await this.assertTotpCode(userId, code);
 
     // deleteSetting cascades to recovery codes via FK
     await mfaRepository.deleteSetting(userId);
@@ -326,22 +316,7 @@ export class MfaService {
   }): Promise<string[]> {
     const { userId, code, ipAddress } = params;
 
-    const setting = await mfaRepository.findByUserId(userId);
-    if (!setting?.isEnabled) {
-      throw new NotFoundError(
-        'MFA_NOT_ENABLED',
-        'MFA is not enabled on this account.'
-      );
-    }
-
-    const base32Secret = decryptSecret(setting.encryptedSecret);
-    if (!verifyTotpCode(base32Secret, code)) {
-      throw new AuthError(
-        'MFA_INVALID_CODE',
-        'Invalid code. Recovery codes were not regenerated.',
-        400
-      );
-    }
+    await this.assertTotpCode(userId, code);
 
     await mfaRepository.deleteAllRecoveryCodes(userId);
     const { raw, hashes } = generateRecoveryCodes(RECOVERY_CODE_COUNT);
@@ -442,6 +417,30 @@ export class MfaService {
     log.info({ orgId, requireMfa, actorUserId }, 'Org MFA policy updated');
 
     return policy;
+  }
+
+  // Verify a TOTP code for a user — used by disableMfa, regenerateRecoveryCodes,
+  // and api-key.service's MFA gate. Does NOT accept recovery codes.
+  // Pass a pre-fetched setting to avoid a redundant DB round-trip.
+  async assertTotpCode(
+    userId: string,
+    code: string,
+    prefetchedSetting?: MfaSetting | null
+  ): Promise<void> {
+    const setting =
+      prefetchedSetting ?? (await mfaRepository.findByUserId(userId));
+
+    if (!setting?.isEnabled) {
+      throw new NotFoundError(
+        'MFA_NOT_ENABLED',
+        'MFA is not enabled on this account.'
+      );
+    }
+
+    const base32Secret = decryptSecret(setting.encryptedSecret);
+    if (!verifyTotpCode(base32Secret, code)) {
+      throw new AuthError('MFA_INVALID_CODE', 'Invalid TOTP code.', 400);
+    }
   }
 
   // Check if a user has MFA enabled — used by auth.service in the login flow.
