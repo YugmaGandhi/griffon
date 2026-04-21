@@ -14,6 +14,7 @@ import { rbacRoutes } from './routes/rbac.routes';
 import { adminRoutes } from './routes/admin.routes';
 import { orgRoutes } from './routes/org.routes';
 import { webhookRoutes } from './routes/webhook.routes';
+import { apiKeyRoutes } from './routes/api-key.routes';
 import { sessionRoutes } from './routes/session.routes';
 import { pool } from './db/connection';
 import { seedSystemData } from './db/seed';
@@ -176,6 +177,7 @@ export async function buildApp() {
   void app.register(adminRoutes, { prefix: '/api/admin' });
   void app.register(orgRoutes, { prefix: '/api/orgs' });
   void app.register(webhookRoutes, { prefix: '/api/orgs/:orgId/webhooks' });
+  void app.register(apiKeyRoutes, { prefix: '/api' });
 
   // ── Error Handlers ──────────────────────────────────────
   app.setNotFoundHandler((request, reply) => {
