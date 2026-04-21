@@ -17,10 +17,10 @@ import { createLogger } from '../utils/logger';
 const log = createLogger('ApiKeyService');
 
 // ── Key generation ────────────────────────────────────────
-// Format: va_live_ (8 chars) + 43 chars base64url = 51 chars total.
+// Format: grf_live_ (8 chars) + 43 chars base64url = 51 chars total.
 // base64url of 32 random bytes = 43 chars (no padding).
 function generateRawKey(): string {
-  return `va_live_${crypto.randomBytes(32).toString('base64url')}`;
+  return `grf_live_${crypto.randomBytes(32).toString('base64url')}`;
 }
 
 // SHA-256 hex digest — same rationale as refresh tokens (high entropy, no Argon2id needed).
@@ -166,7 +166,7 @@ export class ApiKeyService {
   }
 
   // ── Authenticate by raw key ───────────────────────────
-  // Called from authenticate.ts when the Authorization header starts with `Bearer va_live_`.
+  // Called from authenticate.ts when the Authorization header starts with `Bearer grf_live_`.
   // Returns the context needed to populate request.user.
   // Does NOT check the Redis blocklist — authenticate.ts handles that for both paths.
   async authenticateByKey(rawKey: string): Promise<ApiKeyAuthResult> {
