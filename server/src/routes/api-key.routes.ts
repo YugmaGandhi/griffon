@@ -10,6 +10,7 @@ import {
   sendValidationError,
 } from '../utils/response';
 import { authenticate } from '../middleware/authenticate';
+import { requireInteractiveAuth } from '../middleware/require-interactive-auth';
 
 const log = createLogger('ApiKeyRoutes');
 
@@ -42,6 +43,9 @@ export function apiKeyRoutes(
   done: () => void
 ) {
   app.addHook('preHandler', authenticate);
+  // API-key principals cannot manage API keys — JWT sessions only.
+  // See docs/PHASE2.md "API key self-replication" for rationale.
+  app.addHook('preHandler', requireInteractiveAuth);
 
   // ── POST /api/api-keys — Create key ───────────────────
   // Returns the plaintext key once — it is NOT stored and cannot be recovered.

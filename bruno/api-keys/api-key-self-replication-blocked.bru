@@ -1,0 +1,48 @@
+meta {
+  name: Create API Key (blocked - API key principal)
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/api/api-keys
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{apiKeyPlaintext}}
+}
+
+body:json {
+  {
+    "name": "Escalation attempt",
+    "permissions": ["read:profile"],
+    "expiresAt": null,
+    "orgId": null,
+    "totpCode": ""
+  }
+}
+
+docs {
+  Demonstrates posture: an API key cannot mint another
+  API key. Run `Create API Key` first so {{apiKeyPlaintext}} is set,
+  then run this request.
+
+  Expected response: 403 REQUIRES_INTERACTIVE_AUTH
+  {
+    "success": false,
+    "error": {
+      "code": "REQUIRES_INTERACTIVE_AUTH",
+      "message": "API key credentials cannot be used to manage API keys. Sign in with a user session."
+    }
+  }
+
+  The same rejection applies to GET /api/api-keys, GET /api/api-keys/:id,
+  and DELETE /api/api-keys/:id when called with a `grf_live_` bearer token.
+}
+
+assert {
+  res.status: eq 403
+  res.body.error.code: eq REQUIRES_INTERACTIVE_AUTH
+}

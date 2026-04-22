@@ -20,6 +20,10 @@ declare module 'fastify' {
       orgId: string | null;
       orgRole: string | null;
       orgPermissions: string[];
+      // Tracks how the caller authenticated on this request.
+      // Used by requireInteractiveAuth to block API-key principals from
+      // privileged planes (e.g. key management).
+      authMethod: 'jwt' | 'api_key';
     };
   }
 }
@@ -69,6 +73,7 @@ export async function authenticate(
         orgId: result.orgId,
         orgRole: null,
         orgPermissions: [],
+        authMethod: 'api_key',
       };
 
       // Fire-and-forget — updateLastUsed has internal error handling.
@@ -112,6 +117,7 @@ export async function authenticate(
       orgId: payload.orgId ?? null,
       orgRole: payload.orgRole ?? null,
       orgPermissions: payload.orgPermissions ?? [],
+      authMethod: 'jwt',
     };
   } catch (err) {
     log.debug({ reqId: request.id, err }, 'Token verification failed');

@@ -370,19 +370,22 @@ describe('API Key Routes', () => {
   // ── Authenticate with an API key ───────────────────────────
 
   describe('API key authentication', () => {
-    it('should authenticate a valid key on a protected endpoint', async () => {
+    it('should block API-key principals from key-management routes (REQUIRES_INTERACTIVE_AUTH)', async () => {
       const { accessToken } = await registerAndLogin('auth-key@test.com');
       const createRes = await createApiKey(accessToken);
       const { plaintext } = createRes.json<{ data: { plaintext: string } }>()
         .data;
 
-      // Use the plaintext key as a Bearer token
+      // API keys authenticate successfully but must not reach key-management
       const res = await app.inject({
         method: 'GET',
         url: '/api/api-keys',
         headers: { authorization: `Bearer ${plaintext}` },
       });
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(403);
+      expect(res.json()).toMatchObject({
+        error: { code: 'REQUIRES_INTERACTIVE_AUTH' },
+      });
     });
 
     it('should return 401 for an invalid key', async () => {

@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { authenticate } from '../middleware/authenticate';
 import { authorize } from '../middleware/authorize';
+import { requireInteractiveAuth } from '../middleware/require-interactive-auth';
 import { isAppError } from '../utils/errors';
 import { createLogger } from '../utils/logger';
 import {
@@ -377,7 +378,13 @@ export function adminRoutes(
   // ── GET /api/admin/users/:id/api-keys — List user's keys ─
   app.get(
     '/users/:id/api-keys',
-    { preHandler: [authenticate, authorize('read:users')] },
+    {
+      preHandler: [
+        authenticate,
+        requireInteractiveAuth,
+        authorize('read:users'),
+      ],
+    },
     async (request, reply) => {
       const parsed = userIdParamSchema.safeParse(request.params);
       if (!parsed.success) {
@@ -408,7 +415,13 @@ export function adminRoutes(
 
   app.delete(
     '/users/:id/api-keys/:keyId',
-    { preHandler: [authenticate, authorize('write:users')] },
+    {
+      preHandler: [
+        authenticate,
+        requireInteractiveAuth,
+        authorize('write:users'),
+      ],
+    },
     async (request, reply) => {
       const parsed = adminKeyParamSchema.safeParse(request.params);
       if (!parsed.success) {
