@@ -1,4 +1,4 @@
-import { and, eq, isNull, sql } from 'drizzle-orm';
+import { and, eq, gt, isNull, or, sql } from 'drizzle-orm';
 import { db } from '../db/connection';
 import { apiKeys } from '../db/schema';
 import { ApiKey } from '../utils/types';
@@ -90,12 +90,19 @@ export class ApiKeyRepository {
     }
   }
 
-  // Count active (non-revoked) keys for a user — used to enforce MAX_API_KEYS_PER_USER.
+  // Count active (non-revoked, non-expired) keys for a user — used to enforce MAX_API_KEYS_PER_USER.
+  // Expired keys are excluded: they cannot authenticate, so they should not occupy a slot.
   async countByUserId(userId: string): Promise<number> {
     const [result] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(apiKeys)
-      .where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt)));
+      .where(
+        and(
+          eq(apiKeys.userId, userId),
+          isNull(apiKeys.revokedAt),
+          or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, new Date()))
+        )
+      );
 
     return result?.count ?? 0;
   }
