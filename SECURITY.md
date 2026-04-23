@@ -67,7 +67,7 @@ Tokens are signed with **RS256** (asymmetric RSA):
 - Org enforcement: owners can require MFA for all members, enforced at middleware level; super-admins bypass
 
 ### API Keys
-- Key format: `grf_live_` prefix + 43 cryptographically random base64url characters (51 chars total)
+- Key format: `grf_live_` prefix + 43 cryptographically random base64url characters (52 chars total)
 - `grf_live_` prefix makes keys easy to identify in logs, secret scanners, and rotation scripts
 - Only the **SHA-256 hash** is stored — the plaintext is returned once at creation and never persisted
 - Keys carry explicit permission strings frozen at creation — authenticating with a key never grants more than what was specified

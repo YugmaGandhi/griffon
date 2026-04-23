@@ -17,7 +17,7 @@ import { createLogger } from '../utils/logger';
 const log = createLogger('ApiKeyService');
 
 // ── Key generation ────────────────────────────────────────
-// Format: grf_live_ (8 chars) + 43 chars base64url = 51 chars total.
+// Format: grf_live_ (9 chars) + 43 chars base64url = 52 chars total.
 // base64url of 32 random bytes = 43 chars (no padding).
 function generateRawKey(): string {
   return `grf_live_${crypto.randomBytes(32).toString('base64url')}`;
@@ -124,12 +124,19 @@ export class ApiKeyService {
       expiresAt: expiresAt ?? null,
     });
 
-    void auditRepository.create({
-      userId,
-      eventType: 'api_key_created',
-      ipAddress,
-      metadata: { keyId: record.id, name, prefix },
-    });
+    void auditRepository
+      .create({
+        userId,
+        eventType: 'api_key_created',
+        ipAddress,
+        metadata: { keyId: record.id, name, prefix },
+      })
+      .catch((err: unknown) => {
+        log.error(
+          { err, eventType: 'api_key_created', userId, keyId: record.id },
+          'Failed to write API key creation audit log'
+        );
+      });
 
     log.info({ userId, keyId: record.id, name }, 'API key created');
 
@@ -173,12 +180,19 @@ export class ApiKeyService {
 
     await apiKeyRepository.revoke(id);
 
-    void auditRepository.create({
-      userId,
-      eventType: 'api_key_revoked',
-      ipAddress,
-      metadata: { keyId: id, name: key.name, prefix: key.prefix },
-    });
+    void auditRepository
+      .create({
+        userId,
+        eventType: 'api_key_revoked',
+        ipAddress,
+        metadata: { keyId: id, name: key.name, prefix: key.prefix },
+      })
+      .catch((err: unknown) => {
+        log.error(
+          { err, eventType: 'api_key_revoked', userId, keyId: id },
+          'Failed to write API key revocation audit log'
+        );
+      });
 
     log.info({ userId, keyId: id }, 'API key revoked');
   }
@@ -223,17 +237,18 @@ export class ApiKeyService {
     return keys.map(toSafeApiKey);
   }
 
-  // ── Admin: revoke any key ─────────────────────────────
-  // No ownership check, no MFA gate — admin bypass matches adminDisableMfa pattern.
+  // ── Admin: revoke a target user's key ─────────────────
+  // Admin bypasses caller ownership and MFA, but the key must belong to targetUserId.
   async adminRevokeKey(params: {
     keyId: string;
+    targetUserId: string;
     adminId: string;
     ipAddress?: string;
   }): Promise<void> {
-    const { keyId, adminId, ipAddress } = params;
+    const { keyId, targetUserId, adminId, ipAddress } = params;
 
     const key = await apiKeyRepository.findById(keyId);
-    if (!key) {
+    if (!key || key.userId !== targetUserId) {
       throw new NotFoundError('API_KEY_NOT_FOUND', 'API key not found.');
     }
 
@@ -246,18 +261,25 @@ export class ApiKeyService {
 
     await apiKeyRepository.revoke(keyId);
 
-    void auditRepository.create({
-      userId: adminId,
-      eventType: 'api_key_revoked',
-      ipAddress,
-      metadata: {
-        keyId,
-        name: key.name,
-        prefix: key.prefix,
-        revokedBy: 'admin',
-        targetUserId: key.userId,
-      },
-    });
+    void auditRepository
+      .create({
+        userId: adminId,
+        eventType: 'api_key_revoked',
+        ipAddress,
+        metadata: {
+          keyId,
+          name: key.name,
+          prefix: key.prefix,
+          revokedBy: 'admin',
+          targetUserId: key.userId,
+        },
+      })
+      .catch((err: unknown) => {
+        log.error(
+          { err, eventType: 'api_key_revoked', adminId, keyId },
+          'Failed to write admin API key revocation audit log'
+        );
+      });
 
     log.warn(
       { keyId, adminId, targetUserId: key.userId },

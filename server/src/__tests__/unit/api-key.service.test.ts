@@ -413,25 +413,38 @@ describe('ApiKeyService', () => {
     it('should throw NotFoundError when key does not exist', async () => {
       mockApiKeyRepo.findById.mockResolvedValue(null);
 
-      await expect(service.adminRevokeKey({ keyId, adminId })).rejects.toThrow(
-        NotFoundError
-      );
+      await expect(
+        service.adminRevokeKey({ keyId, targetUserId: userId, adminId })
+      ).rejects.toThrow(NotFoundError);
     });
 
     it('should throw ConflictError when key is already revoked', async () => {
       mockApiKeyRepo.findById.mockResolvedValue(revokedKey);
 
       await expect(
-        service.adminRevokeKey({ keyId, adminId })
+        service.adminRevokeKey({ keyId, targetUserId: userId, adminId })
       ).rejects.toMatchObject({ code: 'API_KEY_ALREADY_REVOKED' });
     });
 
-    it('should revoke and write audit log without ownership check', async () => {
-      // Key belongs to userId, but adminId is revoking it — should succeed
+    it('should reject when the key does not belong to the target user', async () => {
+      mockApiKeyRepo.findById.mockResolvedValue(activeKey);
+
+      await expect(
+        service.adminRevokeKey({
+          keyId,
+          targetUserId: otherUserId,
+          adminId,
+        })
+      ).rejects.toMatchObject({ code: 'API_KEY_NOT_FOUND' });
+      expect(mockApiKeyRepo.revoke).not.toHaveBeenCalled();
+    });
+
+    it('should revoke and write audit log when key belongs to target user', async () => {
+      // Key belongs to target userId, but adminId is revoking it — should succeed.
       mockApiKeyRepo.findById.mockResolvedValue(activeKey);
       mockApiKeyRepo.revoke.mockResolvedValue();
 
-      await service.adminRevokeKey({ keyId, adminId });
+      await service.adminRevokeKey({ keyId, targetUserId: userId, adminId });
 
       expect(mockApiKeyRepo.revoke).toHaveBeenCalledWith(keyId);
       expect(mockAuditRepo.create).toHaveBeenCalledWith(

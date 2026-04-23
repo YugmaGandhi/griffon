@@ -42,6 +42,7 @@ describe('API Key Routes', () => {
 
   afterAll(async () => {
     await app.close();
+    await redis.quit();
   });
 
   // ── Shared helpers ─────────────────────────────────────────

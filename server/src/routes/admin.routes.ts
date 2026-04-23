@@ -407,7 +407,8 @@ export function adminRoutes(
   );
 
   // ── DELETE /api/admin/users/:id/api-keys/:keyId — Revoke ─
-  // Admin bypass — no ownership check, no MFA gate.
+  // Admin bypass — no caller ownership check, no MFA gate.
+  // The key must still belong to the target user named by :id.
   const adminKeyParamSchema = z.object({
     id: z.string().uuid('Invalid user ID'),
     keyId: z.string().uuid('Invalid API key ID'),
@@ -431,6 +432,7 @@ export function adminRoutes(
       try {
         await apiKeyService.adminRevokeKey({
           keyId: parsed.data.keyId,
+          targetUserId: parsed.data.id,
           adminId: request.user!.id,
           ipAddress: request.ip,
         });
