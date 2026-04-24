@@ -129,7 +129,7 @@ export class ApiKeyRepository {
     await db
       .update(apiKeys)
       .set({ revokedAt: new Date() })
-      .where(eq(apiKeys.id, id));
+      .where(and(eq(apiKeys.id, id), isNull(apiKeys.revokedAt)));
   }
 
   // Fire-and-forget update — called on every authenticated request via the key.
