@@ -3,6 +3,7 @@ import { db } from '../db/connection';
 import { apiKeys } from '../db/schema';
 import { ApiKey } from '../utils/types';
 import { createLogger } from '../utils/logger';
+import { ConflictError } from '../utils/errors';
 
 const log = createLogger('ApiKeyRepository');
 
@@ -38,6 +39,55 @@ export class ApiKeyRepository {
     return key;
   }
 
+  // Atomically checks the active key count and inserts if under maxKeys.
+  // Uses a pg advisory lock keyed on the userId so concurrent requests for the
+  // same user are serialized — preventing a TOCTOU race on the key cap.
+  async createWithLimitCheck(
+    params: CreateApiKeyParams,
+    maxKeys: number
+  ): Promise<ApiKey> {
+    return db.transaction(async (tx) => {
+      // Acquire a transaction-scoped advisory lock for this user.
+      // The lock is released automatically when the transaction commits or rolls back.
+      await tx.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtext(${'api_key_limit:' + params.userId}))`
+      );
+
+      const [countResult] = await tx
+        .select({ count: sql<number>`count(*)::int` })
+        .from(apiKeys)
+        .where(
+          and(
+            eq(apiKeys.userId, params.userId),
+            isNull(apiKeys.revokedAt),
+            or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, new Date()))
+          )
+        );
+
+      if ((countResult?.count ?? 0) >= maxKeys) {
+        throw new ConflictError(
+          'API_KEY_LIMIT_REACHED',
+          `You have reached the maximum of ${maxKeys} active API keys. Revoke an existing key before creating a new one.`
+        );
+      }
+
+      const [key] = await tx
+        .insert(apiKeys)
+        .values({
+          userId: params.userId,
+          orgId: params.orgId ?? null,
+          name: params.name,
+          prefix: params.prefix,
+          keyHash: params.keyHash,
+          permissions: params.permissions,
+          expiresAt: params.expiresAt ?? null,
+        })
+        .returning();
+
+      return key;
+    });
+  }
+
   // Lookup a key by its SHA-256 hash — used in the auth middleware hot path.
   // Returns revoked and expired keys too; validity checks are the service's job.
   async findByHash(keyHash: string): Promise<ApiKey | null> {
@@ -56,13 +106,19 @@ export class ApiKeyRepository {
     return key ?? null;
   }
 
-  // List all non-revoked keys for a user, newest first.
-  // Revoked rows are kept in the DB for audit purposes but excluded from the management view.
+  // List all active (non-revoked, non-expired) keys for a user, newest first.
+  // Revoked and expired rows are kept in the DB for audit purposes but excluded from the management view.
   async findByUserId(userId: string): Promise<ApiKey[]> {
     return db
       .select()
       .from(apiKeys)
-      .where(and(eq(apiKeys.userId, userId), isNull(apiKeys.revokedAt)))
+      .where(
+        and(
+          eq(apiKeys.userId, userId),
+          isNull(apiKeys.revokedAt),
+          or(isNull(apiKeys.expiresAt), gt(apiKeys.expiresAt, new Date()))
+        )
+      )
       .orderBy(sql`${apiKeys.createdAt} DESC`);
   }
 

@@ -102,27 +102,23 @@ export class ApiKeyService {
 
     await assertMfaGate(userId, totpCode);
 
-    const activeKeyCount = await apiKeyRepository.countByUserId(userId);
-    if (activeKeyCount >= env.MAX_API_KEYS_PER_USER) {
-      throw new ConflictError(
-        'API_KEY_LIMIT_REACHED',
-        `You have reached the maximum of ${env.MAX_API_KEYS_PER_USER} active API keys. Revoke an existing key before creating a new one.`
-      );
-    }
-
     const rawKey = generateRawKey();
-    const prefix = rawKey.slice(0, 10);
+    // 16 chars: "grf_live_" (9) + 7 random base64url chars — enough entropy for audit identification.
+    const prefix = rawKey.slice(0, 16);
     const keyHash = hashKey(rawKey);
 
-    const record = await apiKeyRepository.create({
-      userId,
-      orgId: orgId ?? null,
-      name,
-      prefix,
-      keyHash,
-      permissions,
-      expiresAt: expiresAt ?? null,
-    });
+    const record = await apiKeyRepository.createWithLimitCheck(
+      {
+        userId,
+        orgId: orgId ?? null,
+        name,
+        prefix,
+        keyHash,
+        permissions,
+        expiresAt: expiresAt ?? null,
+      },
+      env.MAX_API_KEYS_PER_USER
+    );
 
     void auditRepository
       .create({
